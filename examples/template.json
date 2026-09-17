@@ -1,0 +1,19 @@
+{
+  "label": "Moje miejsca — własne notatki / uprawniony import",
+  "spots": [
+    {
+      "id": "moje-001",
+      "source": "own-notes",
+      "name": "UZUPEŁNIJ: nazwa miejsca",
+      "lat": 50.9,
+      "lon": 16.3,
+      "park4night_url": "",
+      "type": "nature",
+      "description": "UZUPEŁNIJ: własny opis albo treść, do której masz prawa.",
+      "comments": [],
+      "photos": [],
+      "geo": {},
+      "evidence": []
+    }
+  ]
+}

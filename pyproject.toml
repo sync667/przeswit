@@ -1,0 +1,29 @@
+[project]
+name = "przeswit"
+version = "2.0"
+description = "Lokalna biblioteka miejsc w naturze — stdlib HTTP, SQLite, lokalna Ollama."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+dependencies = []
+
+[project.scripts]
+przeswit = "przeswit.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["przeswit"]
+
+[tool.setuptools.package-data]
+przeswit = ["prompts/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 200
+target-version = "py310"

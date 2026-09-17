@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Dane lokalne (baza SQLite, kopie, cache zdjęć, logi Ollamy) — nigdy nie publikuj
+data/
+
+# Pliki eksportów wrzucane do inbox
+inbox/*
+!inbox/.gitkeep
+
+# Sekrety
+.env
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

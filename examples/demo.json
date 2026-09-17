@@ -1,0 +1,255 @@
+{
+  "label": "DEMO: 7 fikcyjnych miejsc, ilustracje testowe; nie są propozycją wyjazdu",
+  "spots": [
+    {
+      "id": "demo-1",
+      "source": "synthetic",
+      "name": "DEMO · Polana nad doliną",
+      "lat": 50.8,
+      "lon": 16.1,
+      "type": "nature",
+      "description": "FIKCYJNE miejsce. Otwarta panorama, spokojna polana. Szuter. Namiot obok motocykla.",
+      "park4night_url": "",
+      "geo": {
+        "elevation_m": 810,
+        "surface": "gravel"
+      },
+      "evidence": [
+        {
+          "topic": "motorcycle",
+          "value": "allowed",
+          "authority": "owner",
+          "date": "2026-09-17",
+          "source_url": "https://example.org/demo-only",
+          "text": "FIKCYJNY dowód do testów: motorcycle allowed"
+        },
+        {
+          "topic": "tent",
+          "value": "allowed",
+          "authority": "owner",
+          "date": "2026-09-17",
+          "source_url": "https://example.org/demo-only",
+          "text": "FIKCYJNY dowód do testów: tent allowed"
+        },
+        {
+          "topic": "adjacent",
+          "value": "allowed",
+          "authority": "owner",
+          "date": "2026-09-17",
+          "source_url": "https://example.org/demo-only",
+          "text": "FIKCYJNY dowód do testów: adjacent allowed"
+        }
+      ],
+      "comments": [
+        {
+          "text": "Fikcyjna relacja testowa: spokojnie w tygodniu, stan po deszczu nieznany.",
+          "date": "2026-09-17"
+        }
+      ],
+      "photos": [
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAACWCAIAAABvmpKCAAACxUlEQVR4nO3Sy4kUQBRA0c7GGNy6MwCTMATBOIxJMAVzcTEggjNDO3b3q7p14ATwPvfy4+d3yLiMTwA3JGhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTsnHQX759/dv4VMzaL+hnO1Y2T7YJ+sqOlX24pYN+c8TiPtaKQd+8Y2WfY6GgH9CxsvOGgx6JWNxhM0GPt6vsqocGPV6qsvPuHvR4lOI+yr2CHu9P2We6cdDjtSn7cDcIejysFYw/kidvD3q8oTWNf/Rw/xz0eDG7GH/tma4KejyO3Y2/+RyvBT3eQc/4v/OeCXr86ycYf3zVRcTjxiMouYy/k9/GawgQ9IoGg/jw+dNLxmMVdMFgwa8bb1fQe1sh4vXjFvR+Vih42b4Fvbd1Il4kbkFHrFPwbN+C3tt4oKvFLejNjFe4eN+C3sB4ahvFLegVjfe0GkHvZzyaXQh6UeNlNAhawWWCFnGKoBWcImgRpwhawSmCFnGKoBWcImgRp5we9PgDuK0Tgx4/OvdzRNDjV+ZhmkGPn5UpnaDHT8kKNg56/HYsaLOgx+/F4lYPevxA7GXFoMePwr6WCHr8CmSMBT2+OUmPC3p8VU5w36DH1+M0Nw56fB8O979Bjy8Af3pL0ONDw0uuCnp8SrjSi0GPTwZvcFEwJZfxCeCGLu8+vocMQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCk/AJldti2ZP6OiwAAAABJRU5ErkJggg==",
+          "caption": "Syntetyczna ilustracja demonstracyjna — nie zdjęcie miejsca"
+        }
+      ]
+    },
+    {
+      "id": "demo-2",
+      "source": "synthetic",
+      "name": "DEMO · Zakręt rzeki",
+      "lat": 50.97,
+      "lon": 16.4,
+      "type": "nature",
+      "description": "FIKCYJNE miejsce. Rzeka, spokojny brzeg i natura. Widok na dolinę.",
+      "park4night_url": "",
+      "geo": {
+        "elevation_m": 310,
+        "water_distance_m": 25,
+        "surface": "compacted"
+      },
+      "evidence": [
+        {
+          "topic": "motorcycle",
+          "value": "allowed",
+          "authority": "owner",
+          "date": "2026-09-17",
+          "source_url": "https://example.org/demo-only",
+          "text": "FIKCYJNY dowód do testów: motorcycle allowed"
+        },
+        {
+          "topic": "tent",
+          "value": "allowed",
+          "authority": "owner",
+          "date": "2026-09-17",
+          "source_url": "https://example.org/demo-only",
+          "text": "FIKCYJNY dowód do testów: tent allowed"
+        },
+        {
+          "topic": "adjacent",
+          "value": "allowed",
+          "authority": "owner",
+          "date": "2026-09-17",
+          "source_url": "https://example.org/demo-only",
+          "text": "FIKCYJNY dowód do testów: adjacent allowed"
+        }
+      ],
+      "comments": [
+        {
+          "text": "Fikcyjna relacja testowa: spokojnie w tygodniu, stan po deszczu nieznany.",
+          "date": "2026-09-17"
+        }
+      ],
+      "photos": [
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAACWCAIAAABvmpKCAAADeklEQVR4nO3SvY0lBRCF0ZcNMeCuRwAkQQhIxLEiGhwcJFIgF4yRxtmd5e2ju2/V7SN9AdTPefz9z19STY/4BNKBAa2qgFZVQKsqoFUV0KoKaFUFtKoCWlUBraqAVlVAqyqgVRXQqgpoVQW0qgJaVQGtqoBWVUCrKqBVFdCqCmhVBbSqAlpVAa2qgFZVQKsqoFUV0KoKaFUFtKoCWlUBraqAVlVAqyqgVRXQqgpoVQW0qgJaVQGtqoBWVUCrKqBVFdCqCmhVBbSqAlpVAa2qgFZVQKsqoFUV0KoKaFUFtKoCWlUBraqAVlVAqyqgVRXQqgpoVQW0qgJaVS0G/evn374sPpWy7QP9Vcdk6601oJ90TPbNGw36ZcRw37aJoA93TPZ9GgT6Asdk1xcGHUEMd3EZ0HG7ZLd2Kei4VLLrOx10HCXct+os0HF/ZN+zg0HHtZF98w4AHYc1ofgj9dbroOOGZhb/6M37btBxMVuKv/aePQU6jmN78Tffp2+BjjvoK/7v+r4COv71OxR/fGsPiOPFETT1iL9T78U1FAT0xIIgPv3y80fFsQLdUFDwt4vbBXp3ExDPxw30viYIHusb6N3NQTwEN9AlzRGc9Q307uJAp+EGellxhcN9A72gOLVFuIGeWNzTtIDeVxzNloAeWlxGR0AT3BzQEFcFNMFVAQ1xVUATXBXQEFcFNMFVAQ1xVXcHfdQdf//jz6OKm1jdHUGfdMoDTWP9crcAfdk1mY7XCTp40GNNY/299YCOn/I9poMtBh2/3UcdDhrr51sGOn6vJzvJNNb/2XTQ8QO9HNORJoKOH+WozjON9UeNAB2/wnkxfXEx0PHNr+lU0Fh/2XWg46umusA01u+dCzq+3pCYvqyDQcf3Gds1prH+v6DjCyyK6Qt6BXR86KVdBvrOrJ8CHZ+ypotN35D1h6Djk7XG9Kk9CL6+603fh/UjPsE9Y/qkHj/89KOuLwL6rfjupwZ0rKDpYtZAJ2P68IAOlzXdxxrofEwfGND54qCbWAM9orjmGtZATylOucM00IOKUy5gDfSs4o63mwZ6VnHE21kDPa644NWsgZ5YnO9e00APLc53KWug5xa3u9E00HOLw93IGujRxdWuYw309OJkd5kGekFxsotYA72juNctpoHeURzrFtZArykudQVroDcVZzrfNNDLijMdzvpfSa9mfAj1H08AAAAASUVORK5CYII=",
+          "caption": "Syntetyczna ilustracja demonstracyjna — nie zdjęcie miejsca"
+        }
+      ]
+    },
+    {
+      "id": "demo-3",
+      "source": "synthetic",
+      "name": "DEMO · Leśny punkt widokowy",
+      "lat": 50.72,
+      "lon": 16.46,
+      "type": "nature",
+      "description": "FIKCYJNE miejsce. Panorama. Droga leśna, szlaban i zakaz wjazdu.",
+      "park4night_url": "",
+      "geo": {
+        "elevation_m": 900,
+        "surface": "gravel",
+        "forest": true
+      },
+      "evidence": [
+        {
+          "topic": "motorcycle",
+          "value": "forbidden",
+          "authority": "owner",
+          "date": "2026-09-17",
+          "source_url": "https://example.org/demo-only",
+          "text": "FIKCYJNY dowód do testów: motorcycle forbidden"
+        }
+      ],
+      "comments": [
+        {
+          "text": "Fikcyjna relacja testowa: spokojnie w tygodniu, stan po deszczu nieznany.",
+          "date": "2026-09-17"
+        }
+      ],
+      "photos": [
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAACWCAIAAABvmpKCAAACxUlEQVR4nO3Sy4kUQBRA0c7GGNy6MwCTMATBOIxJMAVzcTEggjNDO3b3q7p14ATwPvfy4+d3yLiMTwA3JGhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTsnHQX759/dv4VMzaL+hnO1Y2T7YJ+sqOlX24pYN+c8TiPtaKQd+8Y2WfY6GgH9CxsvOGgx6JWNxhM0GPt6vsqocGPV6qsvPuHvR4lOI+yr2CHu9P2We6cdDjtSn7cDcIejysFYw/kidvD3q8oTWNf/Rw/xz0eDG7GH/tma4KejyO3Y2/+RyvBT3eQc/4v/OeCXr86ycYf3zVRcTjxiMouYy/k9/GawgQ9IoGg/jw+dNLxmMVdMFgwa8bb1fQe1sh4vXjFvR+Vih42b4Fvbd1Il4kbkFHrFPwbN+C3tt4oKvFLejNjFe4eN+C3sB4ahvFLegVjfe0GkHvZzyaXQh6UeNlNAhawWWCFnGKoBWcImgRpwhawSmCFnGKoBWcImgRp5we9PgDuK0Tgx4/OvdzRNDjV+ZhmkGPn5UpnaDHT8kKNg56/HYsaLOgx+/F4lYPevxA7GXFoMePwr6WCHr8CmSMBT2+OUmPC3p8VU5w36DH1+M0Nw56fB8O979Bjy8Af3pL0ONDw0uuCnp8SrjSi0GPTwZvcFEwJZfxCeCGLu8+vocMQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCk/AJldti2ZP6OiwAAAABJRU5ErkJggg==",
+          "caption": "Syntetyczna ilustracja demonstracyjna — nie zdjęcie miejsca"
+        }
+      ]
+    },
+    {
+      "id": "demo-4",
+      "source": "synthetic",
+      "name": "DEMO · Łąka za wsią",
+      "lat": 51.08,
+      "lon": 16.2,
+      "type": "nature",
+      "description": "FIKCYJNE miejsce. Spokojna łąka, szeroki widok. Brak informacji o zgodzie.",
+      "park4night_url": "",
+      "geo": {
+        "elevation_m": 420,
+        "surface": "dirt"
+      },
+      "evidence": [],
+      "comments": [
+        {
+          "text": "Fikcyjna relacja testowa: spokojnie w tygodniu, stan po deszczu nieznany.",
+          "date": "2026-09-17"
+        }
+      ],
+      "photos": [
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAACWCAIAAABvmpKCAAACxUlEQVR4nO3Sy4kUQBRA0c7GGNy6MwCTMATBOIxJMAVzcTEggjNDO3b3q7p14ATwPvfy4+d3yLiMTwA3JGhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTsnHQX759/dv4VMzaL+hnO1Y2T7YJ+sqOlX24pYN+c8TiPtaKQd+8Y2WfY6GgH9CxsvOGgx6JWNxhM0GPt6vsqocGPV6qsvPuHvR4lOI+yr2CHu9P2We6cdDjtSn7cDcIejysFYw/kidvD3q8oTWNf/Rw/xz0eDG7GH/tma4KejyO3Y2/+RyvBT3eQc/4v/OeCXr86ycYf3zVRcTjxiMouYy/k9/GawgQ9IoGg/jw+dNLxmMVdMFgwa8bb1fQe1sh4vXjFvR+Vih42b4Fvbd1Il4kbkFHrFPwbN+C3tt4oKvFLejNjFe4eN+C3sB4ahvFLegVjfe0GkHvZzyaXQh6UeNlNAhawWWCFnGKoBWcImgRpwhawSmCFnGKoBWcImgRp5we9PgDuK0Tgx4/OvdzRNDjV+ZhmkGPn5UpnaDHT8kKNg56/HYsaLOgx+/F4lYPevxA7GXFoMePwr6WCHr8CmSMBT2+OUmPC3p8VU5w36DH1+M0Nw56fB8O979Bjy8Af3pL0ONDw0uuCnp8SrjSi0GPTwZvcFEwJZfxCeCGLu8+vocMQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCk/AJldti2ZP6OiwAAAABJRU5ErkJggg==",
+          "caption": "Syntetyczna ilustracja demonstracyjna — nie zdjęcie miejsca"
+        }
+      ]
+    },
+    {
+      "id": "demo-5",
+      "source": "synthetic",
+      "name": "DEMO · Brzeg po deszczu",
+      "lat": 50.85,
+      "lon": 16.6,
+      "type": "nature",
+      "description": "FIKCYJNE miejsce. Rzeka i natura, błoto na dojeździe.",
+      "park4night_url": "",
+      "geo": {
+        "water_distance_m": 12,
+        "surface": "mud"
+      },
+      "evidence": [],
+      "comments": [
+        {
+          "text": "Fikcyjna relacja testowa: spokojnie w tygodniu, stan po deszczu nieznany.",
+          "date": "2026-09-17"
+        }
+      ],
+      "photos": [
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAACWCAIAAABvmpKCAAADeklEQVR4nO3SvY0lBRCF0ZcNMeCuRwAkQQhIxLEiGhwcJFIgF4yRxtmd5e2ju2/V7SN9AdTPefz9z19STY/4BNKBAa2qgFZVQKsqoFUV0KoKaFUFtKoCWlUBraqAVlVAqyqgVRXQqgpoVQW0qgJaVQGtqoBWVUCrKqBVFdCqCmhVBbSqAlpVAa2qgFZVQKsqoFUV0KoKaFUFtKoCWlUBraqAVlVAqyqgVRXQqgpoVQW0qgJaVQGtqoBWVUCrKqBVFdCqCmhVBbSqAlpVAa2qgFZVQKsqoFUV0KoKaFUFtKoCWlUBraqAVlVAqyqgVRXQqgpoVQW0qgJaVS0G/evn374sPpWy7QP9Vcdk6601oJ90TPbNGw36ZcRw37aJoA93TPZ9GgT6Asdk1xcGHUEMd3EZ0HG7ZLd2Kei4VLLrOx10HCXct+os0HF/ZN+zg0HHtZF98w4AHYc1ofgj9dbroOOGZhb/6M37btBxMVuKv/aePQU6jmN78Tffp2+BjjvoK/7v+r4COv71OxR/fGsPiOPFETT1iL9T78U1FAT0xIIgPv3y80fFsQLdUFDwt4vbBXp3ExDPxw30viYIHusb6N3NQTwEN9AlzRGc9Q307uJAp+EGellxhcN9A72gOLVFuIGeWNzTtIDeVxzNloAeWlxGR0AT3BzQEFcFNMFVAQ1xVUATXBXQEFcFNMFVAQ1xVXcHfdQdf//jz6OKm1jdHUGfdMoDTWP9crcAfdk1mY7XCTp40GNNY/299YCOn/I9poMtBh2/3UcdDhrr51sGOn6vJzvJNNb/2XTQ8QO9HNORJoKOH+WozjON9UeNAB2/wnkxfXEx0PHNr+lU0Fh/2XWg46umusA01u+dCzq+3pCYvqyDQcf3Gds1prH+v6DjCyyK6Qt6BXR86KVdBvrOrJ8CHZ+ypotN35D1h6Djk7XG9Kk9CL6+603fh/UjPsE9Y/qkHj/89KOuLwL6rfjupwZ0rKDpYtZAJ2P68IAOlzXdxxrofEwfGND54qCbWAM9orjmGtZATylOucM00IOKUy5gDfSs4o63mwZ6VnHE21kDPa644NWsgZ5YnO9e00APLc53KWug5xa3u9E00HOLw93IGujRxdWuYw309OJkd5kGekFxsotYA72juNctpoHeURzrFtZArykudQVroDcVZzrfNNDLijMdzvpfSa9mfAj1H08AAAAASUVORK5CYII=",
+          "caption": "Syntetyczna ilustracja demonstracyjna — nie zdjęcie miejsca"
+        }
+      ]
+    },
+    {
+      "id": "demo-6",
+      "source": "synthetic",
+      "name": "DEMO · Parking przy jeziorze",
+      "lat": 51.05,
+      "lon": 16.05,
+      "type": "nature",
+      "description": "FIKCYJNE miejsce. Jezioro, hałas i tłum. Kampery parkują; brak danych o namiotach.",
+      "park4night_url": "",
+      "geo": {
+        "water_distance_m": 90,
+        "surface": "asphalt"
+      },
+      "evidence": [],
+      "comments": [
+        {
+          "text": "Fikcyjna relacja testowa: spokojnie w tygodniu, stan po deszczu nieznany.",
+          "date": "2026-09-17"
+        }
+      ],
+      "photos": [
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAACWCAIAAABvmpKCAAADeklEQVR4nO3SvY0lBRCF0ZcNMeCuRwAkQQhIxLEiGhwcJFIgF4yRxtmd5e2ju2/V7SN9AdTPefz9z19STY/4BNKBAa2qgFZVQKsqoFUV0KoKaFUFtKoCWlUBraqAVlVAqyqgVRXQqgpoVQW0qgJaVQGtqoBWVUCrKqBVFdCqCmhVBbSqAlpVAa2qgFZVQKsqoFUV0KoKaFUFtKoCWlUBraqAVlVAqyqgVRXQqgpoVQW0qgJaVQGtqoBWVUCrKqBVFdCqCmhVBbSqAlpVAa2qgFZVQKsqoFUV0KoKaFUFtKoCWlUBraqAVlVAqyqgVRXQqgpoVQW0qgJaVS0G/evn374sPpWy7QP9Vcdk6601oJ90TPbNGw36ZcRw37aJoA93TPZ9GgT6Asdk1xcGHUEMd3EZ0HG7ZLd2Kei4VLLrOx10HCXct+os0HF/ZN+zg0HHtZF98w4AHYc1ofgj9dbroOOGZhb/6M37btBxMVuKv/aePQU6jmN78Tffp2+BjjvoK/7v+r4COv71OxR/fGsPiOPFETT1iL9T78U1FAT0xIIgPv3y80fFsQLdUFDwt4vbBXp3ExDPxw30viYIHusb6N3NQTwEN9AlzRGc9Q307uJAp+EGellxhcN9A72gOLVFuIGeWNzTtIDeVxzNloAeWlxGR0AT3BzQEFcFNMFVAQ1xVUATXBXQEFcFNMFVAQ1xVXcHfdQdf//jz6OKm1jdHUGfdMoDTWP9crcAfdk1mY7XCTp40GNNY/299YCOn/I9poMtBh2/3UcdDhrr51sGOn6vJzvJNNb/2XTQ8QO9HNORJoKOH+WozjON9UeNAB2/wnkxfXEx0PHNr+lU0Fh/2XWg46umusA01u+dCzq+3pCYvqyDQcf3Gds1prH+v6DjCyyK6Qt6BXR86KVdBvrOrJ8CHZ+ypotN35D1h6Djk7XG9Kk9CL6+603fh/UjPsE9Y/qkHj/89KOuLwL6rfjupwZ0rKDpYtZAJ2P68IAOlzXdxxrofEwfGND54qCbWAM9orjmGtZATylOucM00IOKUy5gDfSs4o63mwZ6VnHE21kDPa644NWsgZ5YnO9e00APLc53KWug5xa3u9E00HOLw93IGujRxdWuYw309OJkd5kGekFxsotYA72juNctpoHeURzrFtZArykudQVroDcVZzrfNNDLijMdzvpfSa9mfAj1H08AAAAASUVORK5CYII=",
+          "caption": "Syntetyczna ilustracja demonstracyjna — nie zdjęcie miejsca"
+        }
+      ]
+    },
+    {
+      "id": "demo-7",
+      "source": "synthetic",
+      "name": "DEMO · Poza przykładowym obszarem",
+      "lat": 49.45,
+      "lon": 22.1,
+      "type": "nature",
+      "description": "FIKCYJNE miejsce. Panorama, spokojna polana.",
+      "park4night_url": "",
+      "geo": {
+        "elevation_m": 700,
+        "surface": "gravel"
+      },
+      "evidence": [],
+      "comments": [
+        {
+          "text": "Fikcyjna relacja testowa: spokojnie w tygodniu, stan po deszczu nieznany.",
+          "date": "2026-09-17"
+        }
+      ],
+      "photos": [
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAACWCAIAAABvmpKCAAACxUlEQVR4nO3Sy4kUQBRA0c7GGNy6MwCTMATBOIxJMAVzcTEggjNDO3b3q7p14ATwPvfy4+d3yLiMTwA3JGhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTImhSBE2KoEkRNCmCJkXQpAiaFEGTsnHQX759/dv4VMzaL+hnO1Y2T7YJ+sqOlX24pYN+c8TiPtaKQd+8Y2WfY6GgH9CxsvOGgx6JWNxhM0GPt6vsqocGPV6qsvPuHvR4lOI+yr2CHu9P2We6cdDjtSn7cDcIejysFYw/kidvD3q8oTWNf/Rw/xz0eDG7GH/tma4KejyO3Y2/+RyvBT3eQc/4v/OeCXr86ycYf3zVRcTjxiMouYy/k9/GawgQ9IoGg/jw+dNLxmMVdMFgwa8bb1fQe1sh4vXjFvR+Vih42b4Fvbd1Il4kbkFHrFPwbN+C3tt4oKvFLejNjFe4eN+C3sB4ahvFLegVjfe0GkHvZzyaXQh6UeNlNAhawWWCFnGKoBWcImgRpwhawSmCFnGKoBWcImgRp5we9PgDuK0Tgx4/OvdzRNDjV+ZhmkGPn5UpnaDHT8kKNg56/HYsaLOgx+/F4lYPevxA7GXFoMePwr6WCHr8CmSMBT2+OUmPC3p8VU5w36DH1+M0Nw56fB8O979Bjy8Af3pL0ONDw0uuCnp8SrjSi0GPTwZvcFEwJZfxCeCGLu8+vocMQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCkCJoUQZMiaFIETYqgSRE0KYImRdCk/AJldti2ZP6OiwAAAABJRU5ErkJggg==",
+          "caption": "Syntetyczna ilustracja demonstracyjna — nie zdjęcie miejsca"
+        }
+      ]
+    }
+  ]
+}
