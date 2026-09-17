@@ -2,7 +2,7 @@ import unittest,tempfile
 from pathlib import Path
 from unittest.mock import patch
 from concurrent.futures import ThreadPoolExecutor
-from przeswit import storage as s,photo_cache as c,profiles as p
+from app import storage as s,photo_cache as c,profiles as p
 class PhotoCacheTests(unittest.TestCase):
     def test_concurrent_fetch_once_and_offline_reuse(self):
         with tempfile.TemporaryDirectory() as directory,patch.object(s,'DATA',Path(directory)),patch.object(c.time,'sleep'):

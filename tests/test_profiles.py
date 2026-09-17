@@ -2,8 +2,8 @@ import unittest
 from unittest.mock import patch
 import tempfile
 from pathlib import Path
-from przeswit import profiles as p
-from przeswit import storage as s
+from app import profiles as p
+from app import storage as s
 class ProfileTests(unittest.TestCase):
     def test_unknown_does_not_match_required(self):
         q={'conditions':[dict(feature='river',target=100,weight=5,required=True)]}

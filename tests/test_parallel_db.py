@@ -2,7 +2,7 @@ import unittest,tempfile,json,sqlite3
 from pathlib import Path
 from unittest.mock import patch
 from concurrent.futures import ThreadPoolExecutor
-from przeswit import storage as s,profiles as p,ai_runtime as runtime
+from app import storage as s,profiles as p,ai_runtime as runtime
 class ParallelDatabaseTests(unittest.TestCase):
     def test_atomic_claims_and_backup(self):
         with tempfile.TemporaryDirectory() as folder,patch.object(s,'DATA',Path(folder)):

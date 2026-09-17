@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch
-from przeswit import local_vision as v
+from app import local_vision as v
 class VisionTests(unittest.TestCase):
     def test_block_untrusted_image_hosts(self):
         for url in ['http://127.0.0.1/a.jpg','https://localhost/a.jpg','https://cdn3.park4night.com.evil.test/a.jpg','https://user:pass@cdn3.park4night.com/a.jpg','https://cdn3.park4night.com:444/a.jpg']:

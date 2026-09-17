@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
-python -m przeswit
+python -m app
 pause

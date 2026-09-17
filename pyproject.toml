@@ -8,17 +8,17 @@ license = { text = "Proprietary" }
 dependencies = []
 
 [project.scripts]
-przeswit = "przeswit.server:main"
+przeswit = "app.server:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["przeswit"]
+packages = ["app"]
 
 [tool.setuptools.package-data]
-przeswit = ["prompts/*.md"]
+app = ["prompts/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

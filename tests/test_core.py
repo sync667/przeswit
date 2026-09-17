@@ -3,7 +3,7 @@ import json
 import unittest
 from unittest.mock import patch
 import datetime as dt
-from przeswit.core import area_parse,inside,normalize,rank,analyze_ai,TODAY
+from app.core import area_parse,inside,normalize,rank,analyze_ai,TODAY
 
 def spot(**kw):
     raw=dict(id='1',source='test',name='Test',lat=50.9,lon=16.3,description='',type='nature',comments=[],photos=[],geo={},evidence=[])

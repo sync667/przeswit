@@ -1,6 +1,6 @@
 # Prześwit
 
-Lokalna biblioteka miejsc w naturze. Uruchom START.cmd albo `python -m przeswit` (Python 3.10+, bez zależności zewnętrznych) i otwórz http://127.0.0.1:8765.
+Lokalna biblioteka miejsc w naturze. Uruchom START.cmd albo `python -m app` (Python 3.10+, bez zależności zewnętrznych) i otwórz http://127.0.0.1:8765.
 
 Duże karty pokazują zdjęcia bez otwierania szczegółów. Strzałki zmieniają zdjęcie; kliknięcie otwiera większą galerię. Odrzuć / Zachowaj do oceny zapisują wybór w SQLite. Cofnij odwraca ostatnią decyzję. Zakładki: Do przejrzenia, Zachowane, Odrzucone, Wszystkie. Odrzucenie nie usuwa danych.
 
@@ -15,7 +15,7 @@ Testy: `python -m unittest discover -s tests -t .` (albo `pytest`).
 ## Struktura projektu
 
 ```
-przeswit/            pakiet Pythona (backend)
+app/                 pakiet Pythona (backend)
   server.py          serwer HTTP (stdlib), API i pliki statyczne
   storage.py         SQLite, kopie zapasowe, ustawienia
   core.py            normalizacja, filtry obszaru, ranking
@@ -48,7 +48,7 @@ Wnioskowanie odbywa się wyłącznie przez lokalny adres 127.0.0.1:11434, bez p�
 
 Zastępuje ręczne ocenianie stron opisane powyżej. Każda nowa lub zmieniona lokacja otrzymuje profil w tle, niezależny od prompta wyszukiwania. Obecna baza jest profilowana tą samą kolejką. Po starcie i co 15 sekund wykrywane są zmiany danych. Tabela SQLite profiles przechowuje stan, wersję prompta, skrót danych źródłowych, błędy i wynik. Restart wznawia przerwane rekordy, błędy mają maksymalnie trzy automatyczne próby z odstępem; interfejs pozwala ponowić je ręcznie i wstrzymać pracę po bieżącym miejscu. Jedna analiza naraz.
 
-Pełny prompt klasyfikacji: przeswit/prompts/profile_prompt.md. Katalog ma 37 cech, m.in. krajobraz, wodę, nawierzchnię, namiot, motocykl, prywatność, ruch, udogodnienia, koszty i ryzyka. Każda rozpoznana cecha ma natężenie, pewność, uzasadnienie i odniesienia do źródeł. Do 5 zdjęć i do 15 komentarzy / dowodów na rekord. Brak zdjęć oznacza profil text_only, a nie udawaną analizę obrazu. Zmiany treści pod niezmienionym URL zdjęcia nie są wykrywane bez nowego importu z innymi danymi.
+Pełny prompt klasyfikacji: app/prompts/profile_prompt.md. Katalog ma 37 cech, m.in. krajobraz, wodę, nawierzchnię, namiot, motocykl, prywatność, ruch, udogodnienia, koszty i ryzyka. Każda rozpoznana cecha ma natężenie, pewność, uzasadnienie i odniesienia do źródeł. Do 5 zdjęć i do 15 komentarzy / dowodów na rekord. Brak zdjęć oznacza profil text_only, a nie udawaną analizę obrazu. Zmiany treści pod niezmienionym URL zdjęcia nie są wykrywane bez nowego importu z innymi danymi.
 
 Szukaj według opisu uruchamia drugi prompt modelu: tłumaczy życzenie na cechy, ich pożądane wartości, wagi i wymagania konieczne. Potem kod porównuje WSZYSTKIE gotowe aktualne profile, nie tylko bieżącą stronę. Wynik uwzględnia pewność dowodów, a nieznane cechy nie spełniają wymagań. Plan jest pokazany w „Jak AI zrozumiało wyszukiwanie?”. Niewspierane wymagania są ujawniane. Dokładna geografia powinna być określona filtrami obszaru; model nie jest silnikiem tras ani weryfikatorem zgód. Złożone alternatywy są przybliżane wagami, nie pełną logiką boolowską.
 
@@ -62,7 +62,7 @@ Aktualny model: gemma3:12b (zastępuje wcześniejszy 4B). Wyniki małego porówn
 
 Baza: data/scout.sqlite3, SQLite WAL, synchronous=FULL, busy_timeout=20 s. Miejsca, wybory, notatki, profile i stany kolejki pozostają po zamknięciu. Ścieżkę można zmienić przez PRZESWIT_DATA (starsze ADV_SCOUT_DATA nadal działa). Kopie online tworzy SQLite Backup API, następnie kontrola quick_check i atomowa zmiana nazwy. Raz dziennie powstaje data/backups/przeswit-YYYY-MM-DD.sqlite3; dodatkową kopię tworzy przycisk w „Importuj miejsca → Baza danych i kopie zapasowe”. Kopie nie są automatycznie kasowane. Są na tym samym dysku: dla ochrony przed awarią dysku skopiuj backup również na inny nośnik. Odtwarzaj po zatrzymaniu aplikacji; nie zastępuj pliku SQLite w trakcie pracy ani przy aktywnych plikach WAL.
 
-Własny proces Ollama Prześwitu działa na 127.0.0.1:11435, OLLAMA_NUM_PARALLEL=2, jeden załadowany model. Korzysta z istniejącego katalogu D:\Ollama; można ustawić PRZESWIT_MODELS. Chmura i automatyczne porządkowanie modeli wyłączone dla tego procesu. Zwykła Ollama na porcie 11434 pozostaje osobną usługą. START.cmd / `python -m przeswit` uruchamia lokalny silnik, jeśli potrzeba.
+Własny proces Ollama Prześwitu działa na 127.0.0.1:11435, OLLAMA_NUM_PARALLEL=2, jeden załadowany model. Korzysta z istniejącego katalogu D:\Ollama; można ustawić PRZESWIT_MODELS. Chmura i automatyczne porządkowanie modeli wyłączone dla tego procesu. Zwykła Ollama na porcie 11434 pozostaje osobną usługą. START.cmd / `python -m app` uruchamia lokalny silnik, jeśli potrzeba.
 
 Profilowanie ma do dwóch wykonawców. Rezerwacje zadań używają BEGIN IMMEDIATE i trwałego statusu running. Zmiany źródła i wersji uniemożliwiają nadpisanie nowszego profilu starszą odpowiedzią. W interfejsie Auto / 1 / 2; Auto przyznaje dwa zadania na GPU >=18 GB i >=3 GB wolnego VRAM, jedno poniżej tego zapasu, wstrzymuje nowe zadania przy <1,5 GB VRAM albo <4 GB wolnego RAM. Gdy telemetria GPU niedostępna, limit wynosi jeden. Telemetria co 10 s; to ostrożny limit przyjmowania prac, nie gwarancja braku OOM. Już rozpoczęte analizy kończą się normalnie. Limit 2 został zweryfikowany na tym komputerze; więcej wolnego VRAM nie dowodzi korzyści z większej liczby zadań. Wyszukiwanie ma pierwszeństwo przed startem kolejnych profili.
 

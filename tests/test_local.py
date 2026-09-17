@@ -6,11 +6,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import zipfile
-from przeswit import storage as store
-from przeswit import importers
-from przeswit import providers
-from przeswit import public_web
-from przeswit.core import area_parse,normalize
+from app import storage as store
+from app import importers
+from app import providers
+from app import public_web
+from app.core import area_parse,normalize
 
 class LocalTests(unittest.TestCase):
     def setUp(self):
