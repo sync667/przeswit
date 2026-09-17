@@ -1,6 +1,6 @@
 # Prześwit
 
-Lokalna biblioteka miejsc w naturze. Uruchom START.cmd albo `python -m app` (Python 3.10+, bez zależności zewnętrznych) i otwórz http://127.0.0.1:8765.
+Lokalna biblioteka miejsc w naturze. Uruchom START.cmd (tworzy `.venv` i instaluje zależności z `requirements.txt`) albo ręcznie: `python -m venv .venv`, `.venv\Scripts\pip install -r requirements.txt`, `.venv\Scripts\python -m app`. Otwórz http://127.0.0.1:8765. Backend: FastAPI + uvicorn (Python 3.10+), interaktywna dokumentacja API pod http://127.0.0.1:8765/docs.
 
 Duże karty pokazują zdjęcia bez otwierania szczegółów. Strzałki zmieniają zdjęcie; kliknięcie otwiera większą galerię. Odrzuć / Zachowaj do oceny zapisują wybór w SQLite. Cofnij odwraca ostatnią decyzję. Zakładki: Do przejrzenia, Zachowane, Odrzucone, Wszystkie. Odrzucenie nie usuwa danych.
 
@@ -10,13 +10,17 @@ Baza i notatki: data/scout.sqlite3 (historyczna nazwa pliku zachowana dla ciąg�
 
 Logo: własny znak SVG, prześwit z linią krajobrazu i słońcem. Kolory: leśny #203f35, papier #f6f4ef, bursztyn #e5aa61.
 
-Testy: `python -m unittest discover -s tests -t .` (albo `pytest`).
+Testy: `.venv\Scripts\pip install -r requirements-dev.txt`, potem `python -m unittest discover -s tests -t .` (albo `pytest`). Testy API używają `fastapi.testclient` i tymczasowej bazy — nie dotykają `data/` ani Ollamy.
 
 ## Struktura projektu
 
 ```
 app/                 pakiet Pythona (backend)
-  server.py          serwer HTTP (stdlib), API i pliki statyczne
+  server.py          start uvicorn (127.0.0.1:8765)
+  web.py             aplikacja FastAPI: middleware, obsługa błędów, statyki, cykl życia wątków
+  api.py             endpointy /api/* i /photos/*
+  schemas.py         modele żądań (Pydantic)
+  security.py        token sesji, dozwolone Host/Origin, nagłówki CSP
   storage.py         SQLite, kopie zapasowe, ustawienia
   core.py            normalizacja, filtry obszaru, ranking
   importers.py       import JSON/GeoJSON/CSV/GPX/ZIP i folder inbox
@@ -28,13 +32,21 @@ app/                 pakiet Pythona (backend)
   profiles.py        automatyczne profile miejsc i wyszukiwanie opisem
   photo_cache.py     lokalna pamięć zdjęć (data/photos)
   prompts/           prompty modelu
-static/              frontend: index.html, app.js, style.css, logo.svg, vendor/leaflet
+static/              frontend bez kroku budowania
+  index.html, style.css, logo.svg, vendor/leaflet
+  js/main.js         punkt wejścia (moduły ES): podpięcie zdarzeń i start
+  js/state.js        wspólny stan i stałe; dom.js pomocniki; api.js fetch z tokenem
+  js/library.js      ładowanie, filtrowanie, sortowanie; cards.js galeria kart; detail.js szczegóły
+  js/map.js          Leaflet + warstwa BDL; jobs.js źródła/importy/polling; transfer.js import pliku i eksporty
+  js/ai.js           wyszukiwanie opisem, kolejka profili, cache zdjęć, baza
 examples/            template.json (szablon importu), demo.json (dane demonstracyjne)
-tests/               testy unittest
+tests/               testy unittest (core, importery, profile, cache zdjęć, baza, API)
 docs/                notatki badawcze, porównanie modeli, raport weryfikacji
 data/                baza, kopie, cache zdjęć, logi (ignorowane przez git)
 inbox/               obserwowany folder eksportów (ignorowany przez git)
 ```
+
+Adresy w przeglądarce: `/` (aplikacja), `/static/...` (frontend), `/examples/template.json`, `/photos/<skrót>` (lokalne zdjęcia), `/api/...` (JSON), `/docs` (OpenAPI). Każdy POST wymaga nagłówka `X-ADV-Token` z wartością z `/api/config` oraz Origin z tej aplikacji; serwer przyjmuje tylko Host `127.0.0.1:8765` / `localhost:8765`.
 
 ## Lokalne dopasowanie zdjęć
 
