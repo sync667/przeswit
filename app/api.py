@@ -27,7 +27,11 @@ def ok(data) -> JSONResponse:
 
 
 def ranked(p):
-    return rank(p, p.get('saved_ai'))
+    """Zapisana analiza chmurowa ma pierwszeństwo; w przeciwnym razie oceny z lokalnego profilu AI uzupełniają reguły."""
+    if p.get('saved_ai'):
+        return rank(p, p['saved_ai'])
+    derived = profiles.as_ai(p.get('profile_info'))
+    return rank(p, derived, merge=True) if derived else rank(p)
 
 
 # ---------- GET ----------

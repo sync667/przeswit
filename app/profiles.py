@@ -13,6 +13,39 @@ QUERY_WAITING=threading.Event()
 STATE_LOCK=threading.Lock()
 ACTIVE={}
 STATE={'current':None,'message':'Przygotowuję kolejkę'}
+# Metryki kart (ADV / widok / woda / spokój) wyprowadzone z cech profilu. Ujemne cechy obniżają wynik.
+METRIC_FEATURES={
+    'scenic':(['panorama','mountains','elevated','sunset','sunrise','wild_nature','meadow'],[]),
+    'water':(['waterfront','river','lake','beach','water_access'],[]),
+    'adv_access':(['road_access','easy_offroad','gravel','moto_adjacent','flat_ground'],['difficult_terrain','mud','barriers','steep_ground']),
+    'solitude':(['privacy','low_crowds','quiet','low_buildings','low_traffic'],[]),
+}
+METRIC_LABELS={'scenic':'Widok','water':'Woda','adv_access':'ADV','solitude':'Spokój'}
+MIN_CONFIDENCE=40
+
+def as_ai(info):
+    """Zamienia gotowy profil (profile_info z /api/library) na słownik ocen dla core.rank(..., merge=True).
+    Brak cechy w profilu to None — nie zastępuje ocen z geo ani tekstu. Zwraca None, gdy profil nie jest gotowy."""
+    profile=(info or {}).get('profile')
+    if not profile or (info or {}).get('status')!='ready':return None
+    observed={}
+    for o in profile.get('observations',[]):
+        if isinstance(o,dict) and o.get('feature') in FEATURES and (o.get('confidence') or 0)>=MIN_CONFIDENCE:
+            current=observed.get(o['feature'])
+            if current is None or o.get('score',0)>current.get('score',0):observed[o['feature']]=o
+    scores={};reasons=[]
+    for metric,(positive,negative) in METRIC_FEATURES.items():
+        hits=[observed[f] for f in positive if f in observed]
+        if not hits:scores[metric]=None;continue
+        best=max(hits,key=lambda o:o.get('score',0))
+        value=best.get('score',0)
+        for f in negative:
+            if f in observed:value=min(value,100-observed[f].get('score',0))
+        scores[metric]=max(0,min(100,round(value)))
+        reasons.append(f"{METRIC_LABELS[metric]}: {FEATURES[best['feature']]} {best.get('score',0)}/100 (profil AI, pewność {best.get('confidence',0)}%)")
+    if all(v is None for v in scores.values()):return None
+    return dict(scores=scores,reasons=reasons,red_flags=[],mode='Profil AI (lokalny) + reguły',source='profile')
+
 def digest(p):
     return hashlib.sha256(json.dumps({k:p.get(k) for k in ('name','type','lat','lon','description','comments','photos','geo','evidence','source_url','source_date','facilities','amenities','surface','access','fee','price','rating','review_count','extra_flags')},sort_keys=True).encode()).hexdigest()
 def init():

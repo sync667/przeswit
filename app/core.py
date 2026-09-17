@@ -128,7 +128,8 @@ def age(date):
 def facts(p):
     return [{'id':'description','text':p['description']}] + [dict(c,id=f'comment:{i}') for i,c in enumerate(p['comments'])] + [dict(e,id=f'evidence:{i}') for i,e in enumerate(p['evidence'])]
 
-def rank(p, ai=None):
+def rank(p, ai=None, merge=False):
+    """merge=True: oceny AI uzupełniają reguły (None nie kasuje ocen z geo/tekstu); merge=False: AI zastępuje wszystkie metryki."""
     items=facts(p)
     text=' '.join(x['text'] for x in items).lower()
     geo=p['geo']; flags=[]; why=[]
@@ -163,7 +164,8 @@ def rank(p, ai=None):
     physical_block = scores['adv_access'] is not None and scores['adv_access']<35
     if ai:
         for k in METRICS:
-            scores[k]=ai['scores'].get(k)
+            value=ai['scores'].get(k)
+            if value is not None or not merge: scores[k]=value
         if physical_block:
             scores['adv_access']=min(scores['adv_access'] if scores['adv_access'] is not None else 20,20)
         why.extend(ai.get('reasons',[])); flags.extend(ai.get('red_flags',[]))
@@ -200,7 +202,7 @@ def rank(p, ai=None):
     return dict(p,scores=scores,rank_a=A,rank_b=B,legal_confidence=legal,permissions=permissions,status=status,
                 reasons=why or ['Za mało danych do oceny atrakcyjności'],red_flags=list(dict.fromkeys(flags)),
                 evidence_coverage=round(sum(v is not None for v in scores.values())/4*100),
-                analysis_mode='AI + reguły bezpieczeństwa' if ai else 'Reguły lokalne — bez AI',ai=ai)
+                analysis_mode=(ai.get('mode') or 'AI + reguły bezpieczeństwa') if ai else 'Reguły lokalne — bez AI',ai=ai)
 
 def analyze_ai(p, include_photos=False):
     key=os.getenv('OPENAI_API_KEY'); model=os.getenv('OPENAI_MODEL')

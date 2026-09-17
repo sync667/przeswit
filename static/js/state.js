@@ -41,3 +41,27 @@ export const state={
 
 export const providerName=s=>state.config.sources?.find(x=>x.id===s)?.name||s;
 export const photoURL=url=>state.photoCache[url]||url;
+
+// Grupy cech profilu AI do czytelnej prezentacji w karcie miejsca.
+export const featureGroups=[
+  ['Krajobraz',['panorama','mountains','elevated','forest','meadow','wild_nature','shade','sun_exposure','sunset','sunrise']],
+  ['Woda',['waterfront','river','lake','water_access','beach']],
+  ['Teren i dojazd',['road_access','gravel','easy_offroad','flat_ground','tent_space','moto_adjacent','difficult_terrain','mud']],
+  ['Spokój',['privacy','quiet','low_crowds','low_buildings','low_traffic']],
+  ['Udogodnienia',['free_cost','toilet','drinking_water','facilities','fireplace']],
+  ['Ryzyka',['flood_risk','steep_ground','barriers','litter']],
+];
+// Cechy, których wysoki wynik jest niekorzystny (czerwony pasek).
+export const negativeFeatures=new Set(['difficult_terrain','mud','flood_risk','steep_ground','barriers','litter']);
+
+export const SAVED_CHOICES=['shortlist','A','B'];
+
+// Ocena źródła i liczba komentarzy jako krótki opis pod nazwą miejsca.
+export function factsLine(p){
+  const parts=[];
+  if(typeof p.source_rating==='number')parts.push(`★ ${p.source_rating.toFixed(1)}`);
+  const comments=p.review_count??p.comments.length;
+  parts.push(comments?`${comments} ${comments===1?'komentarz':comments<5?'komentarze':'komentarzy'}`:'bez komentarzy');
+  if(p.photos.length)parts.push(`${p.photos.length} ${p.photos.length===1?'zdjęcie':p.photos.length<5?'zdjęcia':'zdjęć'}`);
+  return parts.join(' · ');
+}

@@ -66,6 +66,10 @@ Szukaj według opisu uruchamia drugi prompt modelu: tłumaczy życzenie na cechy
 
 Wyniki wyszukiwania są migawką gotowych profili i wymagają ponownego wyszukania, by uwzględnić zakończone później analizy. Oceny dopasowania są ważone według pewności; 0 nie oznacza potwierdzonej nieprzydatności. Profilowanie nie zmienia zapisanych/odrzuconych wyborów. Profile pozostają w bazie także przy ponownym imporcie identycznych danych.
 
+## Oceny na kafelkach z profilu AI
+
+Metryki ADV / Widok / Woda / Spokój pochodzą z reguł (geo, słowa kluczowe) i — gdy profil AI jest gotowy — z jego cech: Widok z panoramy, gór, położenia, zachodu/wschodu, natury; Woda z brzegu, rzeki, jeziora, plaży, dojścia do wody; ADV z dojazdu, szutru, lekkiego terenu, miejsca na motocykl i płaskiego terenu, obniżane przez trudny teren, błoto, szlabany i stromiznę; Spokój z osłonięcia, ciszy, małej liczby ludzi, zabudowy i ruchu. Liczy się najlepiej udokumentowana cecha z pewnością ≥ 40%. Wartości z profilu uzupełniają reguły (nie kasują oceny wody z odległości w imporcie); zapisana analiza chmurowa ma pierwszeństwo. Na kafelku widać znacznik „AI”, w karcie miejsca tryb „Profil AI (lokalny) + reguły” oraz uzasadnienie każdej metryki w sekcji dowodów. Karta miejsca pokazuje też ocenę i liczbę komentarzy ze źródła, mapę lokalizacji (podkład OSM, jeśli włączony), komentarze i przyciski zachowaj / odrzuć.
+
 ## Wybrany model i dane tekstowe
 
 Aktualny model: gemma3:12b (zastępuje wcześniejszy 4B). Wyniki małego porównania jakości/czasu i jego ograniczenia opisuje docs/MODEL_COMPARISON.md. Profile v2 uwzględniają opis, 15 najnowszych komentarzy i dowodów, zdjęcia, geo i metadane. Zakres materiału widać w szczegółach miejsca.
@@ -82,7 +86,7 @@ Zdjęcia w bazie mogą być adresami URL, a nie lokalnymi plikami. Sama trwało�
 
 ## Lokalna pamięć zdjęć
 
-Obrazy ze znanych, bezpośrednich adresów CDN zapisujemy w data/photos pod skrótem SHA-256 adresu. Metadane i błędy w tabeli photo_cache. Pobieramy wyłącznie adresy już zaimportowane w photos; nie skanujemy serwisów ani CDN w poszukiwaniu dodatkowych zdjęć. Pobieranie w tle jest seryjne, najwyżej jedno nowe żądanie na 2 sekundy, i współdzieli cache z profilowaniem. Limit 50 GiB całego cache, 6 MB na zdjęcie, rezerwa 2 GiB wolnego dysku. Przycisk wstrzymuje pobieranie wyprzedzające; analiza konkretnego miejsca nadal może pobrać potrzebne zdjęcie.
+Obrazy ze znanych, bezpośrednich adresów CDN zapisujemy w data/photos pod skrótem SHA-256 adresu. Metadane i błędy w tabeli photo_cache. Pobieramy wyłącznie adresy już zaimportowane w photos; nie skanujemy serwisów ani CDN w poszukiwaniu dodatkowych zdjęć. Pobieranie w tle działa równolegle (domyślnie 6 wątków, `PRZESWIT_PHOTO_PARALLEL` 1–10), starty żądań są rozłożone co 0,25 s, ten sam adres nigdy nie jest pobierany dwa razy naraz; cache jest współdzielony z profilowaniem. Limit 50 GiB całego cache, 6 MB na zdjęcie, rezerwa 2 GiB wolnego dysku. Przycisk wstrzymuje pobieranie wyprzedzające; analiza konkretnego miejsca nadal może pobrać potrzebne zdjęcie.
 
 Galeria i model używają tego samego pliku. Lokalne zdjęcia są dostępne pod /photos/<skrót>, bez przekierowań na CDN. Ponowne użycie nie wymaga internetu. Pozostałe linki (np. stron galerii zamiast plików obrazów) nie są automatycznie pobierane. Odpowiedź 401/403/429 odkłada źródło na 24 godziny. Błędy pojedynczych zdjęć są odraczane na 24 godziny. Brak pliku na dysku przy zachowanych metadanych powoduje ponowne pobranie.
 

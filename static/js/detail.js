@@ -1,9 +1,30 @@
-// Okno szczegółów miejsca: galeria, profil AI, akcje OSM/Commons, wybór i notatka, dowody, miejsca w pobliżu.
+// Okno szczegółów miejsca: nagłówek z akcjami, galeria, oceny, profil AI, mapa, komentarze, notatka, dowody.
 import {$,el,link,notify,googleMapLink,distance} from './dom.js';
-import {state,labels,featureLabels,providerName,photoURL} from './state.js';
+import {state,labels,featureLabels,featureGroups,negativeFeatures,providerName,photoURL,SAVED_CHOICES,factsLine} from './state.js';
 import {api} from './api.js';
 import {loadLibrary,currentMatch} from './library.js';
-import {render} from './cards.js';
+import {render,choose} from './cards.js';
+
+let detailMap=null;
+
+function section(title,cls){const s=el('section',undefined,'detail-section'+(cls?' '+cls:''));s.append(el('h3',title,'detail-section-title'));return s;}
+
+// Szybkie decyzje w nagłówku karty — te same co na kafelku; etykiety odświeżają się po zapisie.
+function quickActions(p){
+ const row=el('div',undefined,'detail-actions');
+ const save=el('button',undefined,'save-place'),reject=el('button');
+ function refresh(){const saved=SAVED_CHOICES.includes(p.choice);save.textContent=saved?'✓ Zachowane do oceny':'＋ Zachowaj do oceny';save.classList.toggle('chosen',saved);reject.textContent=p.choice==='rejected'?'↶ Przywróć do przeglądania':'× Odrzuć';reject.classList.toggle('chosen',p.choice==='rejected');const sel=$('detail-choice');if(sel)sel.value=saved?'shortlist':p.choice||'';}
+ save.onclick=async()=>{save.disabled=true;await choose(p,SAVED_CHOICES.includes(p.choice)?'':'shortlist');save.disabled=false;refresh();};
+ reject.onclick=async()=>{reject.disabled=true;await choose(p,p.choice==='rejected'?'':'rejected');reject.disabled=false;refresh();};
+ row.append(save,reject);refresh();row.refresh=refresh;
+ return row;
+}
+
+function scoreGrid(p){
+ const scores=el('div',undefined,'score-grid');
+ for(const [label,value] of [['ADV',p.scores.adv_access],['Widok',p.scores.scenic],['Woda',p.scores.water],['Spokój',p.scores.solitude],['Dowody zgód',p.legal_confidence]]){const box=el('div',undefined,'score-box');box.append(el('strong',value??'—'),el('span',label));scores.append(box);}
+ return scores;
+}
 
 function detailGallery(p,availablePhotos,startPhoto){
  const photos=el('div',undefined,'detail-gallery');
@@ -16,32 +37,101 @@ function detailGallery(p,availablePhotos,startPhoto){
  return photos;
 }
 
+// Jedna cecha profilu: nazwa, pasek natężenia, wynik, pewność; uzasadnienie w jednym wierszu (pełne w podpowiedzi).
+function featureRow(o){
+ const row=el('div',undefined,'ai-feature'+(negativeFeatures.has(o.feature)?' negative':''));
+ const bar=el('span',undefined,'ai-bar'),fill=el('i');fill.style.width=`${Math.max(0,Math.min(100,o.score))}%`;bar.append(fill);
+ const head=el('div',undefined,'ai-feature-head');head.append(el('span',featureLabels[o.feature]||o.feature,'ai-feature-name'),el('span',String(o.score),'ai-score'),el('span',`${o.confidence}%`,'ai-conf'),bar);
+ const reason=el('p',o.reason||'','ai-reason');reason.title=o.reason||'';
+ row.append(head,reason);
+ return row;
+}
+
 function profileSection(p){
  const profile=p.profile_info?.profile;
- if(!profile)return el('p','Profil AI powstanie automatycznie w tle.','hint');
- const box=el('section',undefined,'match-detail');box.append(el('h3','Uniwersalny profil AI'),el('p',profile.summary),el('p',`${profile.photos_analyzed} / ${profile.photos_total} zdjęć · ${profile.coverage==='text_only'?'tylko opis i kontekst, bez analizy obrazu':'zdjęcia i opis'} · ${profile.model}`,'hint'));if(profile.source_coverage){const c=profile.source_coverage;box.append(el('p',`Materiał: opis ${c.description_chars}/${c.description_total_chars} znaków · komentarze ${c.comments_used}/${c.comments_total} (najnowsze) · dowody ${c.evidence_used}/${c.evidence_total} · typ i metadane źródła`,'hint'));}for(const o of profile.observations)box.append(el('p',`${featureLabels[o.feature]||o.feature}: ${o.score}/100 · pewność ${o.confidence}% — ${o.reason} [${o.evidence.join(', ')}]`));for(const [k,label] of [['unknown','Niewiadome'],['warnings','Ostrzeżenia'],['skipped_photos','Pominięte zdjęcia']]){if(profile[k]?.length){box.append(el('h4',label));for(const item of profile[k])box.append(el('p',item));}}const m=currentMatch(p);if(m){box.append(el('h3',`Dopasowanie do wyszukiwania: ${m.match}/100`));for(const t of [...m.reasons,...m.conflicts])box.append(el('p',t));if(m.missing.length)box.append(el('p','Brak danych: '+m.missing.join(', ')));}
+ const box=section('Profil AI','ai-profile');
+ if(!profile){box.append(el('p',p.profile_info?.status==='error'?'Profil nie powstał — błąd analizy; ponów z panelu profilowania.':'Profil AI powstanie automatycznie w tle. Oceny poniżej pochodzą na razie z reguł i danych źródła.','hint'));return box;}
+ const meta=el('p',[`${profile.model}`,`${profile.photos_analyzed} / ${profile.photos_total} zdjęć`,profile.coverage==='text_only'?'tylko opis i kontekst — bez analizy obrazu':'zdjęcia i opis',profile.date?.slice(0,10)].filter(Boolean).join(' · '),'ai-meta');
+ box.append(meta);
+ if(profile.summary)box.append(el('p',profile.summary,'ai-summary'));
+ if(profile.scenes?.length){const scenes=el('ul',undefined,'ai-scenes');for(const s of profile.scenes)scenes.append(el('li',s));box.append(scenes);}
+ const byFeature=new Map();for(const o of profile.observations){const prev=byFeature.get(o.feature);if(!prev||o.score>prev.score)byFeature.set(o.feature,o);}
+ const groups=el('div',undefined,'ai-groups');let placed=0;
+ for(const [title,features] of featureGroups){const rows=features.filter(f=>byFeature.has(f)).map(f=>byFeature.get(f)).sort((a,b)=>b.score-a.score);if(!rows.length)continue;const g=el('div',undefined,'ai-group');g.append(el('h4',title));for(const o of rows){g.append(featureRow(o));placed++;}groups.append(g);}
+ const rest=[...byFeature.values()].filter(o=>!featureGroups.some(([,f])=>f.includes(o.feature)));
+ if(rest.length){const g=el('div',undefined,'ai-group');g.append(el('h4','Inne'));for(const o of rest)g.append(featureRow(o));groups.append(g);}
+ box.append(placed||rest.length?groups:el('p','Model nie rozpoznał żadnej cechy z katalogu.','hint'));
+ if(profile.warnings?.length){const w=el('div',undefined,'ai-warnings');w.append(el('h4','Ostrzeżenia'));const ul=el('ul');for(const item of profile.warnings)ul.append(el('li',item));w.append(ul);box.append(w);}
+ if(profile.unknown?.length){const u=el('div',undefined,'ai-unknown');u.append(el('h4','Bez danych w źródle'));const chips=el('div',undefined,'ai-chips');for(const item of profile.unknown)chips.append(el('span',item.replace(/\.$/,'')));u.append(chips);box.append(u);}
+ if(profile.skipped_photos?.length)box.append(el('p','Pominięte zdjęcia: '+profile.skipped_photos.join('; '),'hint'));
+ const c=profile.source_coverage;if(c)box.append(el('p',`Materiał: opis ${c.description_chars}/${c.description_total_chars} znaków · komentarze ${c.comments_used}/${c.comments_total} · dowody ${c.evidence_used}/${c.evidence_total} · typ i metadane źródła`,'hint'));
+ const m=currentMatch(p);
+ if(m){const match=el('div',undefined,'ai-match');match.append(el('h4',`Dopasowanie do wyszukiwania: ${m.match}/100 · pokrycie ${m.coverage}%`));const ul=el('ul');for(const t of m.reasons)ul.append(el('li',t));for(const t of m.conflicts)ul.append(el('li',t,'conflict'));if(m.missing.length)ul.append(el('li','Brak danych: '+m.missing.join(', '),'missing'));match.append(ul);box.append(match);}
+ return box;
+}
+
+function mapSection(p){
+ const box=section('Lokalizacja','detail-map-section');
+ const holder=el('div',undefined,'detail-map');holder.id='detail-map';
+ box.append(holder,el('p',`${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`,'hint'));
+ return box;
+}
+
+// Mapa tworzona po otwarciu okna (Leaflet potrzebuje widocznego kontenera o znanych wymiarach).
+function mountMap(p){
+ if(detailMap){detailMap.remove();detailMap=null;}
+ const holder=$('detail-map');if(!holder||!window.L)return;
+ if(!$('tiles').checked){holder.replaceWith(el('p','Podkład mapy wyłączony — włącz „Podkład OpenStreetMap online” w ustawieniach.','hint'));return;}
+ detailMap=L.map(holder,{scrollWheelZoom:false}).setView([p.lat,p.lon],14);
+ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(detailMap);
+ L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:3,fillColor:'#ed8d32',fillOpacity:1}).addTo(detailMap).bindTooltip(p.name,{permanent:true,direction:'top',offset:[0,-9]});
+ setTimeout(()=>detailMap?.invalidateSize(),50);
+}
+
+function commentsSection(p){
+ if(!p.comments.length)return null;
+ const box=section(`Komentarze (${p.comments.length})`,'detail-comments');
+ const list=el('div',undefined,'comment-list');
+ for(const c of p.comments){const item=el('article',undefined,'comment');const head=el('div',undefined,'comment-head');head.append(el('span',c.date?.slice(0,10)||'bez daty'));if(c.author)head.append(el('span',String(c.author)));if(typeof c.rating==='number')head.append(el('span',`★ ${c.rating}`));item.append(head,el('p',c.text));list.append(item);}
+ box.append(list);
  return box;
 }
 
 function notesSection(p){
- const wrapper=document.createDocumentFragment();
- const notes=el('div',undefined,'note-grid'),choiceGroup=el('div'),noteGroup=el('div'),choice=el('select');choice.id='detail-choice';for(const [v,t] of [['','Jeszcze nie wybrane'],['shortlist','Na mojej liście'],['rejected','Odrzucone przeze mnie']])choice.append(new Option(t,v));choice.value=['A','B'].includes(p.choice)?'shortlist':p.choice||'';const cl=el('label','Twój wybór');cl.htmlFor=choice.id;choiceGroup.append(cl,choice);const text=el('textarea');text.id='detail-note';text.value=p.user_note||'';text.placeholder='Dojazd, kontakt, rzeczy do sprawdzenia…';const nl=el('label','Prywatna notatka');nl.htmlFor=text.id;noteGroup.append(nl,text);notes.append(choiceGroup,noteGroup);wrapper.append(notes);const save=el('button','Zapisz wybór i notatkę','note-save');save.onclick=async()=>{try{await api('/api/note',{key:p.key,choice:choice.value,note:text.value});p.choice=choice.value;p.user_note=text.value;render();save.textContent='Zapisano lokalnie ✓';}catch(e){notify(e.message,true);}};wrapper.append(save);
- return wrapper;
+ const box=section('Twój wybór i notatka','detail-notes');
+ const notes=el('div',undefined,'note-grid'),choiceGroup=el('div'),noteGroup=el('div'),choice=el('select');choice.id='detail-choice';for(const [v,t] of [['','Jeszcze nie wybrane'],['shortlist','Na mojej liście'],['rejected','Odrzucone przeze mnie']])choice.append(new Option(t,v));choice.value=['A','B'].includes(p.choice)?'shortlist':p.choice||'';const cl=el('label','Twój wybór');cl.htmlFor=choice.id;choiceGroup.append(cl,choice);const text=el('textarea');text.id='detail-note';text.value=p.user_note||'';text.placeholder='Dojazd, kontakt, rzeczy do sprawdzenia…';const nl=el('label','Prywatna notatka');nl.htmlFor=text.id;noteGroup.append(nl,text);notes.append(choiceGroup,noteGroup);box.append(notes);const save=el('button','Zapisz wybór i notatkę','note-save');save.onclick=async()=>{try{await api('/api/note',{key:p.key,choice:choice.value,note:text.value});p.choice=choice.value;p.user_note=text.value;render();save.textContent='Zapisano lokalnie ✓';document.querySelector('.detail-actions')?.refresh?.();}catch(e){notify(e.message,true);}};box.append(save);
+ return box;
 }
 
-export function showDetail(key,startPhoto=0){const p=state.places.find(x=>x.key===key);if(!p)return;state.selected=key;const root=$('detail-content');root.replaceChildren();root.append(el('h2',p.name,'detail-title'),el('span',providerName(p.source),'badge'),el('span',labels[p.type]||p.type,'badge'),el('span',p.status==='excluded'?'ODRZUCONE':p.status==='candidate'?'DOWODY ZGÓD W IMPORCIE':'DO SPRAWDZENIA','badge '+p.status));
- const links=el('div',undefined,'detail-links');links.append(googleMapLink(p));if(p.source_url)links.append(link('Źródło miejsca ↗',p.source_url));if(p.park4night_url)links.append(link('Park4Night ↗',p.park4night_url));if(p.website)links.append(link('Strona / regulamin ↗',p.website));links.append(link('Pokaż współrzędne w OSM ↗',`https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=16/${p.lat}/${p.lon}`));root.append(links,el('p',`${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} · pobrano ${p.fetched_at?.slice(0,10)||'brak daty'} · data źródła ${p.source_date?.slice(0,10)||'nieznana'}`,'hint'));
- const scores=el('div',undefined,'score-grid');for(const [label,value] of [['ADV',p.scores.adv_access],['Widok',p.scores.scenic],['Woda',p.scores.water],['Spokój',p.scores.solitude],['Dowody zgód',p.legal_confidence]]){const box=el('div',undefined,'score-box');box.append(el('strong',value??'—'),el('span',label));scores.append(box);}root.append(scores,el('p',`${p.analysis_mode} · pokrycie danych ${p.evidence_coverage}%`,'hint'));
+function evidenceSection(p){
+ const evidence=el('details',undefined,'detail-evidence');evidence.append(el('summary','Uzasadnienie ocen, dowody i kontekst geograficzny'));
+ const reasons=el('ul');for(const r of p.reasons)reasons.append(el('li',r));evidence.append(reasons);
+ for(const e of p.evidence)evidence.append(el('p',`${e.topic} · ${e.value} · ${e.authority} · ${e.date||'bez daty'} · ${e.text}`));
+ if(Object.keys(p.geo||{}).length)evidence.append(el('pre',JSON.stringify(p.geo,null,2),'source-raw'));
+ if(p.ai&&p.ai.source!=='profile')evidence.append(el('pre',JSON.stringify(p.ai,null,2),'source-raw'));
+ return evidence;
+}
+
+export function showDetail(key,startPhoto=0){const p=state.places.find(x=>x.key===key);if(!p)return;state.selected=key;const root=$('detail-content');root.replaceChildren();
+ root.append(el('h2',p.name,'detail-title'));
+ const badges=el('div',undefined,'detail-badges');badges.append(el('span',providerName(p.source),'badge'),el('span',labels[p.type]||p.type,'badge'),el('span',p.status==='excluded'?'ODRZUCONE':p.status==='candidate'?'DOWODY ZGÓD W IMPORCIE':'DO SPRAWDZENIA','badge '+p.status),el('span',factsLine(p),'detail-facts'));root.append(badges);
+ root.append(quickActions(p));
+ const links=el('div',undefined,'detail-links');links.append(googleMapLink(p));if(p.source_url)links.append(link('Źródło miejsca ↗',p.source_url));if(p.park4night_url&&p.park4night_url!==p.source_url)links.append(link('Park4Night ↗',p.park4night_url));if(p.website)links.append(link('Strona / regulamin ↗',p.website));links.append(link('Pokaż w OSM ↗',`https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=16/${p.lat}/${p.lon}`));root.append(links,el('p',`pobrano ${p.fetched_at?.slice(0,10)||'brak daty'} · data źródła ${p.source_date?.slice(0,10)||'nieznana'} · ${p.analysis_mode} · pokrycie danych ${p.evidence_coverage}%`,'hint'));
  const availablePhotos=p.photos.filter(ph=>ph.url.startsWith('data:image/')||state.photoCache[ph.url]||$('remote-photos').checked);
  root.append(detailGallery(p,availablePhotos,startPhoto));
  if(p.photos.length&&!$('remote-photos').checked)root.append(el('p','Zdjęcia dostępne: włącz „Wyświetlaj zdjęcia z internetu” w ustawieniach.','hint'));
+ root.append(scoreGrid(p));
+ if(p.description){const d=section('Opis ze źródła');d.append(el('p',p.description,'description'));root.append(d);}
+ if(p.red_flags.length){const f=section('Do sprawdzenia');const flags=el('ul',undefined,'flag-list');for(const x of p.red_flags)flags.append(el('li',x));f.append(flags);root.append(f);}
  root.append(profileSection(p));
- if(p.description)root.append(el('p',p.description,'description'));const flags=el('ul',undefined,'flag-list');for(const f of p.red_flags)flags.append(el('li',f));root.append(flags);
+ const columns=el('div',undefined,'detail-columns');columns.append(mapSection(p));const comments=commentsSection(p);if(comments)columns.append(comments);else columns.classList.add('single');root.append(columns);
  const actions=el('div',undefined,'actions');function action(label,path,disabled=false,body={}){const b=el('button',label);b.disabled=disabled;b.onclick=async()=>{b.disabled=true;b.textContent='Pracuję…';try{await api(path,{key:p.key,...body});await loadLibrary();showDetail(p.key);}catch(e){b.disabled=false;b.textContent=label;notify(e.message,true);const err=el('p',e.message,'mini-flag');actions.after(err);}};actions.append(b);}
  action('Sprawdź wodę i drogę (OSM)','/api/enrich');if(p.commons_file)action('Pobierz zdjęcie z Commons','/api/commons');root.append(actions);
  if(p.local_only)root.append(el('p','Analiza zdjęć działa lokalnie na tym komputerze.','hint'));
  root.append(notesSection(p));
- const evidence=el('details');evidence.append(el('summary','Uzasadnienie, dowody i kontekst geograficzny'));for(const r of p.reasons)evidence.append(el('p',r));for(const e of p.evidence)evidence.append(el('p',`${e.topic} · ${e.value} · ${e.authority} · ${e.date||'bez daty'} · ${e.text}`));for(const c of p.comments)evidence.append(el('p',`${c.date||'bez daty'} · ${c.text}`));evidence.append(el('pre',JSON.stringify(p.geo,null,2),'source-raw'));if(p.ai)evidence.append(el('pre',JSON.stringify(p.ai,null,2),'source-raw'));root.append(evidence);
+ root.append(evidenceSection(p));
  const nearby=state.places.filter(x=>x.key!==p.key&&x.source!==p.source&&distance(p,x)<150).sort((a,b)=>distance(p,a)-distance(p,b)).slice(0,6);if(nearby.length){const group=el('div',undefined,'nearby');group.append(el('h3','W pobliżu w innych źródłach'),el('p','Możliwy duplikat lub sąsiedni obiekt — rekordów nie scalamy bez sprawdzenia.'));for(const n of nearby){const b=el('button',`${n.name} · ${providerName(n.source)} · ${Math.round(distance(p,n))} m`);b.onclick=()=>showDetail(n.key);group.append(b);}root.append(group);}
- root.append(el('p',p.license||'Warunki oryginalnego źródła','hint'));const raw=el('details');raw.append(el('summary','Oryginalny rekord źródłowy'),el('pre',JSON.stringify(p.raw||{},null,2),'source-raw'));root.append(raw);if(!$('detail').open)$('detail').showModal();
+ root.append(el('p',p.license||'Warunki oryginalnego źródła','hint'));const raw=el('details');raw.append(el('summary','Oryginalny rekord źródłowy'),el('pre',JSON.stringify(p.raw||{},null,2),'source-raw'));root.append(raw);
+ if(!$('detail').open)$('detail').showModal();
+ mountMap(p);
 }

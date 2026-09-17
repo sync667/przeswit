@@ -36,6 +36,6 @@ export async function databaseInfo(){try{const d=await getJSON('/api/database');
 
 export async function databaseBackup(){const b=$('database-backup');b.disabled=true;try{const r=await api('/api/database/backup',{});$('database-backup-status').textContent='Zapisano: '+r.path;await databaseInfo();}catch(e){$('database-backup-status').textContent=e.message;}finally{b.disabled=false;}}
 
-export async function photosStatus(){try{const r=await getJSON('/api/photos');state.photosPaused=r.paused;$('photo-progress').textContent=`Zdjęcia lokalne: ${r.counts.ready||0} · ${(r.bytes/1048576).toFixed(1)} MB / ${(r.limit/1024**3).toFixed(0)} GB · błędy ${r.counts.error||0}. Pobieranie w tle: ${r.paused?'wstrzymane':'1 na 2 s'}`;$('photos-pause').textContent=r.paused?'Wznów zdjęcia':'Wstrzymaj zdjęcia';}catch{}}
+export async function photosStatus(){try{const r=await getJSON('/api/photos');state.photosPaused=r.paused;$('photo-progress').textContent=`Zdjęcia lokalne: ${r.counts.ready||0} · ${(r.bytes/1048576).toFixed(1)} MB / ${(r.limit/1024**3).toFixed(0)} GB · błędy ${r.counts.error||0}. Pobieranie w tle: ${r.paused?'wstrzymane':`do ${r.parallel||1} równolegle`}`;$('photos-pause').textContent=r.paused?'Wznów zdjęcia':'Wstrzymaj zdjęcia';}catch{}}
 
 export async function togglePhotosPause(){try{await api('/api/photos/pause',{paused:!state.photosPaused});await photosStatus();}catch(e){notify(e.message,true);}}

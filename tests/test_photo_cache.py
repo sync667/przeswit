@@ -24,3 +24,33 @@ class PhotoCacheTests(unittest.TestCase):
         allowed=seen[0]['format']['properties']['observations']['items']['properties']['evidence']['items']['enum']
         self.assertIn('description',allowed);self.assertNotIn('comment:N',allowed);self.assertNotIn('photo:0',allowed)
         self.assertEqual(result['photos_analyzed'],0)
+
+
+class ParallelDownloadTests(unittest.TestCase):
+    def test_different_urls_download_concurrently_same_url_once(self):
+        import threading,time
+        with tempfile.TemporaryDirectory() as directory,patch.object(s,'DATA',Path(directory)),patch.object(c,'MIN_INTERVAL',0):
+            s.init();c.init()
+            active=[];peak=[0];lock=threading.Lock();calls=[]
+            def fetch_for(url):
+                def fetch():
+                    with lock:active.append(url);peak[0]=max(peak[0],len(active));calls.append(url)
+                    time.sleep(.15)
+                    with lock:active.remove(url)
+                    return b'\xff\xd8data'
+                return fetch
+            urls=[f'https://cdn3.park4night.com/{i}.jpg' for i in range(6)]+['https://cdn3.park4night.com/0.jpg']*3
+            with ThreadPoolExecutor(9) as pool:list(pool.map(lambda u:c.get(u,fetch_for(u)),urls))
+            self.assertGreaterEqual(peak[0],2)
+            self.assertLessEqual(peak[0],c.CONCURRENCY)
+            self.assertEqual(calls.count('https://cdn3.park4night.com/0.jpg'),1)
+            self.assertEqual(c.status()['counts']['ready'],6)
+            self.assertEqual(c.status()['parallel'],c.CONCURRENCY)
+
+    def test_pending_urls_skips_ready_and_unknown_hosts(self):
+        with tempfile.TemporaryDirectory() as directory,patch.object(s,'DATA',Path(directory)),patch.object(c,'MIN_INTERVAL',0):
+            s.init();c.init()
+            ready='https://cdn6.park4night.com/ready.jpg';c.get(ready,lambda:b'\xff\xd8x')
+            s.upsert([dict(id='1',source='own-notes',name='a',lat=50.0,lon=16.0,type='nature',description='',comments=[],evidence=[],geo={},
+                           photos=[dict(url=ready),dict(url='https://cdn3.park4night.com/new.jpg'),dict(url='https://example.com/x.jpg'),dict(url='https://cdn3.park4night.com/new.jpg')])])
+            self.assertEqual(c.pending_urls(),['https://cdn3.park4night.com/new.jpg'])

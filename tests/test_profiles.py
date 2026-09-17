@@ -62,3 +62,34 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(c['comments_total'],20)
         self.assertEqual(c['comments_used'],15)
         self.assertEqual(next(x for x in sources if x['id'].startswith('comment:'))['data']['text'],'19')
+
+
+class DerivedScoreTests(unittest.TestCase):
+    def profile(self,*observations):
+        return dict(status='ready',fingerprint='x',profile=dict(summary='',observations=[dict(feature=f,score=s,confidence=c,reason='',evidence=[]) for f,s,c in observations]))
+
+    def test_metrics_from_features(self):
+        ai=p.as_ai(self.profile(('panorama',85,80),('river',70,60),('road_access',90,90),('quiet',60,50)))
+        self.assertEqual(ai['scores'],dict(scenic=85,water=70,adv_access=90,solitude=60))
+        self.assertEqual(ai['mode'],'Profil AI (lokalny) + reguły')
+        self.assertTrue(any(r.startswith('Widok: rozległa panorama 85/100') for r in ai['reasons']))
+
+    def test_low_confidence_and_negatives(self):
+        ai=p.as_ai(self.profile(('panorama',90,20),('road_access',90,90),('barriers',80,70)))
+        self.assertIsNone(ai['scores']['scenic'])
+        self.assertEqual(ai['scores']['adv_access'],20)
+
+    def test_not_ready_or_empty_returns_none(self):
+        self.assertIsNone(p.as_ai(None))
+        self.assertIsNone(p.as_ai(dict(status='pending',profile=None)))
+        self.assertIsNone(p.as_ai(self.profile(('toilet',100,100))))
+
+    def test_rank_merge_keeps_rule_scores(self):
+        from app.core import rank
+        spot=dict(id='1',source='own-notes',name='x',lat=50.0,lon=16.0,type='nature',description='',comments=[],photos=[],geo={'water_distance_m':20},evidence=[])
+        ai=p.as_ai(self.profile(('panorama',85,80)))
+        r=rank(spot,ai,merge=True)
+        self.assertEqual(r['scores']['scenic'],85)
+        self.assertEqual(r['scores']['water'],95)
+        self.assertEqual(r['analysis_mode'],'Profil AI (lokalny) + reguły')
+        self.assertEqual(rank(spot,ai)['scores']['water'],None)
