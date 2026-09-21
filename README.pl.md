@@ -18,7 +18,13 @@ Lokalna, prywatna biblioteka miejsc w naturze na biwak z motocyklem ADV: import 
 
 ## Szybki start
 
-1. `START.cmd` — tworzy `.venv`, instaluje `requirements.txt`, uruchamia serwer. Ręcznie: `python -m venv .venv`, `.venv\Scripts\pip install -r requirements.txt`, `.venv\Scripts\python -m app`.
+1. Uruchom skrypt dla swojej platformy — każdy tworzy `.venv`, instaluje `requirements.txt` i startuje `python -m app` (zmienne z `data/przeswit.env`, wzór `przeswit.env.example`):
+   - **Windows**: dwuklik `START.cmd` (albo `start.ps1` w PowerShellu)
+   - **macOS**: dwuklik `start.command` (albo `./start.sh` w Terminalu)
+   - **Linux**: `./start.sh`
+   - ręcznie: `python -m venv .venv`, `.venv\Scripts\pip install -r requirements.txt`, `.venv\Scripts\python -m app`
+
+   Bez Ollamy aplikacja i tak startuje (przeglądanie, importy, notatki działają); profile AI policzą się po zainstalowaniu Ollamy z `gemma3:12b` i restarcie. Interfejs: polski lub angielski (przełącznik PL/EN w nagłówku).
 2. Otwórz http://127.0.0.1:8765 (dokumentacja API: `/docs`).
 3. „Importuj miejsca” → wczytaj plik (wzór: `examples/template.json`, dane demonstracyjne: `examples/demo.json`) albo wrzuć eksport do folderu `inbox/`. Profile AI powstają automatycznie w tle.
 

@@ -12,6 +12,9 @@ import {showDetail} from './detail.js';
 import {renderSources,poll,startSync} from './jobs.js';
 import {importFile,exportJSON,exportCSV,exportGPX} from './transfer.js';
 import {restoreWish,onWishInput,localStatus,searchByDescription,toggleProfilePause,retryProfiles,setParallelMode,profileStatus,databaseInfo,databaseBackup,togglePhotosPause} from './ai.js';
+import {t,applyStatic,initLangToggle} from './i18n.js';
+
+applyStatic();
 
 // Zapamiętany widok (galeria/mapa, zakładka, filtry, ustawienia) — przywracany po odświeżeniu strony.
 const VIEW_KEY='przeswit-view';
@@ -23,8 +26,8 @@ function restoreControls(v){for(const [id,val] of Object.entries(v.checks||{}))i
 
 function setupLayout(){
  const browseLayout=el('div',undefined,'browse-layout');const cards=$('cards'),mapShell=document.querySelector('.map-shell');cards.before(browseLayout);browseLayout.append(cards,mapShell);
- $('toggle-map').textContent='Mapa + lista';
- $('toggle-map').onclick=()=>{state.mapView=!state.mapView;saveView();mapShell.hidden=!state.mapView;browseLayout.classList.toggle('map-view',state.mapView);$('toggle-map').textContent=state.mapView?'Galeria zdjęć':'Mapa + lista';$('toggle-map').setAttribute('aria-pressed',String(state.mapView));clearHighlight();if(state.mapView){state.map?.invalidateSize();if($('forest-overlay')?.checked)state.forestLayer?.addTo(state.map);const points=filtered();if(points.length)state.map?.fitBounds(points.map(p=>[p.lat,p.lon]),{maxZoom:13,padding:[35,35]});}else {state.forestLayer?.remove();if($('only-map').checked){$('only-map').checked=false;render();}}};
+ $('toggle-map').textContent=t('Mapa + lista');
+ $('toggle-map').onclick=()=>{state.mapView=!state.mapView;saveView();mapShell.hidden=!state.mapView;browseLayout.classList.toggle('map-view',state.mapView);$('toggle-map').textContent=state.mapView?t('Galeria zdjęć'):t('Mapa + lista');$('toggle-map').setAttribute('aria-pressed',String(state.mapView));clearHighlight();if(state.mapView){state.map?.invalidateSize();if($('forest-overlay')?.checked)state.forestLayer?.addTo(state.map);const points=filtered();if(points.length)state.map?.fitBounds(points.map(p=>[p.lat,p.lon]),{maxZoom:13,padding:[35,35]});}else {state.forestLayer?.remove();if($('only-map').checked){$('only-map').checked=false;render();}}};
 }
 
 function bindBrowsing(){
@@ -75,20 +78,20 @@ function bindAI(){
 }
 
 // #place=<klucz> w adresie otwiera kartę miejsca (link można wkleić lub przekazać dalej).
-function openFromHash(){const m=location.hash.match(/^#place=(.+)$/);if(!m)return;const key=decodeURIComponent(m[1]);if(state.places.some(p=>p.key===key))showDetail(key);else notify(`Nie znaleziono miejsca ${key} w bieżącym widoku biblioteki.`,true);}
+function openFromHash(){const m=location.hash.match(/^#place=(.+)$/);if(!m)return;const key=decodeURIComponent(m[1]);if(state.places.some(p=>p.key===key))showDetail(key);else notify(t('Nie znaleziono miejsca {key} w bieżącym widoku biblioteki.',{key}),true);}
 
 // Gość (Cloudflare Access, konto spoza właścicieli): przegląda, ale nie zapisuje — chowamy przyciski zapisu i pokazujemy baner.
 function applyReadOnly(){
  if(!state.config.read_only)return;
  document.body.classList.add('read-only');
- const bar=el('div',`Tryb tylko do odczytu · zalogowano jako ${state.config.user||'gość'} — decyzje, notatki i importy są wyłączone.`,'read-only-banner');
+ const bar=el('div',t('Tryb tylko do odczytu · zalogowano jako {user} — decyzje, notatki i importy są wyłączone.',{user:state.config.user||t('gość')}),'read-only-banner');
  document.querySelector('header').after(bar);
  for(const id of ['open-import','open-own','sync','profile-pause','profile-retry','photos-pause','database-backup','review-page','parallel-mode'])if($(id))$(id).disabled=true;
 }
 
 async function boot(){
  const view=loadView();
- try{state.config=await getJSON('/api/config');if(state.config.last_area){$('areas').value=state.config.last_area.areas;$('radius').value=state.config.last_area.radius;}$('inbox-path').textContent=state.config.inbox;$('ai-state').textContent='Analiza zdjęć: lokalna Ollama / Gemma 3. Bez klucza API.';applyReadOnly();renderSources();initMap();initRoutes();initOwnOnMap();await loadLibrary(true);if(view.selects?.['source-filter']){$('source-filter').value=view.selects['source-filter'];render();}if(view.mapView)$('toggle-map').click();openFromHash();await poll();}catch(e){notify(e.message,true);}
+ try{state.config=await getJSON('/api/config');if(state.config.last_area){$('areas').value=state.config.last_area.areas;$('radius').value=state.config.last_area.radius;}$('inbox-path').textContent=state.config.inbox;$('ai-state').textContent=t('Analiza zdjęć: lokalna Ollama / Gemma 3. Bez klucza API.');applyReadOnly();renderSources();initMap();initRoutes();initOwnOnMap();await loadLibrary(true);if(view.selects?.['source-filter']){$('source-filter').value=view.selects['source-filter'];render();}if(view.mapView)$('toggle-map').click();openFromHash();await poll();}catch(e){notify(e.message,true);}
 }
 
 restoreControls(loadView());
@@ -103,6 +106,7 @@ initOwn();
 initTheme();
 initPresets();
 initShortcuts();
+initLangToggle();
 registerPWA();
 databaseInfo();
 localStatus();

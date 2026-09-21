@@ -4,6 +4,7 @@ import {$,el,notify} from './dom.js';
 import {state,SAVED_CHOICES} from './state.js';
 import {filtered} from './library.js';
 import {render,bulkChoose} from './cards.js';
+import {t} from './i18n.js';
 
 let active=false,vertices=[],preview=null,polygon=null,selectionLayer=null,bar=null;
 
@@ -15,7 +16,7 @@ function pointInPolygon(lat,lon,poly){
 
 function setActive(on){
  active=on;const container=state.map.getContainer();container.classList.toggle('lasso-active',on);
- $('lasso-start').textContent=on?'Zakończ zaznaczanie':'Zaznacz obszar (lasso)';$('lasso-start').classList.toggle('chosen',on);
+ $('lasso-start').textContent=on?t('Zakończ zaznaczanie'):t('Zaznacz obszar (lasso)');$('lasso-start').classList.toggle('chosen',on);
  $('lasso-hint').hidden=!on;
  if(on){state.map.doubleClickZoom.disable();state.map.closePopup();}else state.map.doubleClickZoom.enable();
 }
@@ -42,13 +43,13 @@ function onKey(e){if(e.key==='Escape'&&active)cancel();}
 export function startLasso(){
  if(active){finish();return;}
  clearSelection();vertices=[];setActive(true);
- notify('Lasso: klikaj wierzchołki na mapie, zakończ dwuklikiem albo przyciskiem. Esc anuluje.');
+ notify(t('Lasso: klikaj wierzchołki na mapie, zakończ dwuklikiem albo przyciskiem. Esc anuluje.'));
 }
 
 function cancel(){vertices=[];redrawPreview();setActive(false);}
 
 function finish(){
- if(vertices.length<3){notify('Zaznacz co najmniej 3 punkty.',true);cancel();return;}
+ if(vertices.length<3){notify(t('Zaznacz co najmniej 3 punkty.'),true);cancel();return;}
  const poly=vertices.slice();
  if(preview)preview.remove();preview=null;
  polygon=L.polygon(poly,{color:'#e5aa61',weight:2,fillOpacity:.08}).addTo(state.map);
@@ -56,7 +57,7 @@ function finish(){
  state.selection=new Set(selected.map(p=>p.key));
  vertices=[];setActive(false);
  highlightSelection();renderBar();
- if(!selected.length)notify('W zaznaczonym obszarze nie ma widocznych miejsc (sprawdź filtry).',true);
+ if(!selected.length)notify(t('W zaznaczonym obszarze nie ma widocznych miejsc (sprawdź filtry).'),true);
 }
 
 function highlightSelection(){
@@ -78,29 +79,29 @@ function renderBar(){
  if(!n)return;
  const places=state.places.filter(p=>state.selection.has(p.key));
  const saved=places.filter(p=>SAVED_CHOICES.includes(p.choice)).length,rejected=places.filter(p=>p.choice==='rejected').length;
- $('lasso-count').textContent=`Zaznaczono ${n} ${n===1?'miejsce':n<5?'miejsca':'miejsc'}${saved?` · zachowane ${saved}`:''}${rejected?` · odrzucone ${rejected}`:''}`;
+ $('lasso-count').textContent=t('Zaznaczono {n} {word}',{n,word:n===1?t('miejsce'):n<5?t('miejsca'):t('miejsc')})+(saved?t(' · zachowane {saved}',{saved}):'')+(rejected?t(' · odrzucone {rejected}',{rejected}):'');
 }
 
 async function applyAll(choice){
  const places=state.places.filter(p=>state.selection.has(p.key)&&p.choice!==choice);
- if(!places.length){notify('Wszystkie zaznaczone miejsca mają już ten stan.');return;}
+ if(!places.length){notify(t('Wszystkie zaznaczone miejsca mają już ten stan.'));return;}
  for(const b of bar.querySelectorAll('button'))b.disabled=true;
  const done=await bulkChoose(places,choice);
  for(const b of bar.querySelectorAll('button'))b.disabled=false;
  renderBar();highlightSelection();
- notify(`${choice==='rejected'?'Odrzucono':choice?'Zachowano':'Przywrócono'} ${done} z ${places.length} zaznaczonych miejsc.`,done<places.length);
+ notify(t('{verb} {done} z {total} zaznaczonych miejsc.',{verb:choice==='rejected'?t('Odrzucono'):choice?t('Zachowano'):t('Przywrócono'),done,total:places.length}),done<places.length);
 }
 
 export function initLasso(){
  const shell=document.querySelector('.map-shell');
  bar=el('div',undefined,'lasso-bar');bar.id='lasso-bar';bar.hidden=true;
  const count=el('span',undefined,'lasso-count');count.id='lasso-count';
- const save=el('button','＋ Zachowaj wszystkie','save-place'),reject=el('button','× Odrzuć wszystkie'),restore=el('button','↶ Przywróć wszystkie','ghost'),clear=el('button','Wyczyść zaznaczenie','ghost');
+ const save=el('button',t('＋ Zachowaj wszystkie'),'save-place'),reject=el('button',t('× Odrzuć wszystkie')),restore=el('button',t('↶ Przywróć wszystkie'),'ghost'),clear=el('button',t('Wyczyść zaznaczenie'),'ghost');
  save.onclick=()=>applyAll('shortlist');reject.onclick=()=>applyAll('rejected');restore.onclick=()=>applyAll('');clear.onclick=clearSelection;
  bar.append(count,save,reject,restore,clear);
  const tools=el('div',undefined,'lasso-tools');
- const start=el('button','Zaznacz obszar (lasso)');start.id='lasso-start';start.onclick=startLasso;
- const hint=el('span','Klikaj wierzchołki, dwuklik kończy, Esc anuluje.','hint');hint.id='lasso-hint';hint.hidden=true;
+ const start=el('button',t('Zaznacz obszar (lasso)'));start.id='lasso-start';start.onclick=startLasso;
+ const hint=el('span',t('Klikaj wierzchołki, dwuklik kończy, Esc anuluje.'),'hint');hint.id='lasso-hint';hint.hidden=true;
  tools.append(start,hint);
  const legend=shell.querySelector('.map-legend');(legend||shell).after(tools);tools.after(bar);
  state.selection=new Set();

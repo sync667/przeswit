@@ -4,7 +4,7 @@
 
 A local-first, private library of wild-camping spots for ADV motorcycle trips: import places (JSON / GeoJSON / CSV / GPX / ZIP, P4N, OSM, BDL forest areas), add your own points with photos, browse them as a photo gallery or on a map (OSM, satellite, satellite + terrain relief, Polish "Zanocuj w lesie" forest-camping areas), load GPX routes and see how far every place is from your route, keep / reject places (also in bulk with a lasso), take notes — and **profile every place with a local vision model (Ollama, gemma3)**, then search by a natural-language description. Everything runs on your own computer; nothing is sent to the cloud.
 
-The UI is in Polish (the data set and the target audience are Polish riders); the code, comments and this document are bilingual enough to hack on.
+The UI is available in Polish and English (PL/EN switch in the header; AI-generated profile texts are Polish because the model is prompted in Polish).
 
 ## Screenshots
 
@@ -14,13 +14,19 @@ The UI is in Polish (the data set and the target audience are Polish riders); th
 
 ## Requirements
 
-- Python 3.10+. Windows 10/11 has `START.cmd`; Linux/macOS use `./start.sh` (the server itself is plain FastAPI).
+- Python 3.10+ on Windows, macOS or Linux (start scripts for each; the server itself is plain FastAPI).
 - [Ollama](https://ollama.com) with a vision model: `ollama pull gemma3:12b` (`gemma3:4b` works too, with lower quality). The app starts its own Ollama process on port 11435 using the models directory `~/.ollama/models` (override with `PRZESWIT_MODELS`). A GPU with ≥ 12 GB VRAM is recommended for the 12B model; CPU-only profiling is very slow.
 - Internet only for downloading photos referenced by imports and for map tiles; already fetched data works offline.
 
 ## Quick start
 
-1. `START.cmd` (Windows) or `./start.sh` (Linux/macOS) — creates `.venv`, installs `requirements.txt`, starts the server. Manually: `python -m venv .venv`, `.venv/bin/pip install -r requirements.txt`, `.venv/bin/python -m app`.
+1. Start the server with the script for your platform — each one creates `.venv`, installs `requirements.txt` and runs `python -m app`; environment variables are read from `data/przeswit.env` (template: `przeswit.env.example`):
+   - **Windows**: double-click `START.cmd` (or `start.ps1` in PowerShell)
+   - **macOS**: double-click `start.command` (or `./start.sh` in Terminal)
+   - **Linux**: `./start.sh`
+   - manually: `python -m venv .venv`, `.venv/bin/pip install -r requirements.txt`, `.venv/bin/python -m app`
+
+   Without Ollama the app still starts (browsing, imports, notes work); AI profiles are computed once Ollama with `gemma3:12b` is installed and the app is restarted.
 2. Open http://127.0.0.1:8765 (API docs at `/docs`).
 3. On an empty database the app automatically imports the bundled starter set (`seed/places_pl.pack`, 1364 nature spots in Poland), so there is something to browse right away; AI profiles are computed in the background. Add more via "Importuj miejsca" (template: `examples/template.json`, demo data: `examples/demo.json`) or drop an export into `inbox/`.
 

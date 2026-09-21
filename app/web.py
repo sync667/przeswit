@@ -63,9 +63,16 @@ def create_app(start_workers: bool = False) -> FastAPI:
         profile_worker = None
         if start_workers:
             store.daily_backup()
-            ai_runtime.ensure()
-            profile_worker = threading.Thread(target=profiles.worker, args=(stop,), daemon=True, name='profiles')
-            profile_worker.start()
+            # Bez Ollamy aplikacja nadal działa (przeglądanie, importy, notatki); profile AI czekają na uruchomienie modelu.
+            try:
+                ai_runtime.ensure()
+                profile_worker = threading.Thread(target=profiles.worker, args=(stop,), daemon=True, name='profiles')
+                profile_worker.start()
+            except Exception as exc:
+                message = f'Lokalne AI niedostępne: {exc} Przeglądanie działa; profile powstaną po uruchomieniu Ollamy i restarcie.'
+                with profiles.STATE_LOCK:
+                    profiles.STATE['message'] = message
+                print(message, flush=True)
             threading.Thread(target=photo_cache.worker, args=(stop,), daemon=True, name='photos').start()
             threading.Thread(target=importers.watch, args=(stop,), daemon=True, name='inbox').start()
         yield
