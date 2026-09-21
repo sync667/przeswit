@@ -1,9 +1,12 @@
 // Okno szczegółów miejsca: nagłówek z akcjami, galeria, oceny, profil AI, mapa, komentarze, notatka, dowody.
-import {$,el,link,notify,googleMapLink,distance} from './dom.js';
-import {state,labels,featureLabels,featureGroups,negativeFeatures,providerName,photoURL,SAVED_CHOICES,factsLine} from './state.js';
+import {$,el,link,notify,googleMapLink,distance,keyChip,placeLink} from './dom.js';
+import {state,labels,featureLabels,featureGroups,negativeFeatures,providerName,photoURL,SAVED_CHOICES,factsLine,geoFlags} from './state.js';
 import {api} from './api.js';
 import {loadLibrary,currentMatch} from './library.js';
 import {render,choose} from './cards.js';
+import {FOREST_WMS,FOREST_OPTIONS,attachBasemaps,earth3dLink,googleSatelliteLink} from './map.js';
+import {formatDistance} from './routes.js';
+import {OWN_SOURCE,OWN_STATUS,openOwnDialog} from './own.js';
 
 let detailMap=null;
 
@@ -16,7 +19,7 @@ function quickActions(p){
  function refresh(){const saved=SAVED_CHOICES.includes(p.choice);save.textContent=saved?'✓ Zachowane do oceny':'＋ Zachowaj do oceny';save.classList.toggle('chosen',saved);reject.textContent=p.choice==='rejected'?'↶ Przywróć do przeglądania':'× Odrzuć';reject.classList.toggle('chosen',p.choice==='rejected');const sel=$('detail-choice');if(sel)sel.value=saved?'shortlist':p.choice||'';}
  save.onclick=async()=>{save.disabled=true;await choose(p,SAVED_CHOICES.includes(p.choice)?'':'shortlist');save.disabled=false;refresh();};
  reject.onclick=async()=>{reject.disabled=true;await choose(p,p.choice==='rejected'?'':'rejected');reject.disabled=false;refresh();};
- row.append(save,reject);refresh();row.refresh=refresh;
+ row.append(save,reject);if(p.source===OWN_SOURCE){const edit=el('button','✎ Edytuj punkt');edit.onclick=()=>openOwnDialog(p);row.append(edit);}refresh();row.refresh=refresh;
  return row;
 }
 
@@ -37,13 +40,17 @@ function detailGallery(p,availablePhotos,startPhoto){
  return photos;
 }
 
-// Jedna cecha profilu: nazwa, pasek natężenia, wynik, pewność; uzasadnienie w jednym wierszu (pełne w podpowiedzi).
+// Jedna cecha profilu: nazwa, wskaźnik pewności (3 słupki + podpowiedź), wynik jako liczba, pasek natężenia
+// (blednie przy niskiej pewności); uzasadnienie w dwóch wierszach, pełne po najechaniu.
 function featureRow(o){
  const row=el('div',undefined,'ai-feature'+(negativeFeatures.has(o.feature)?' negative':''));
- const bar=el('span',undefined,'ai-bar'),fill=el('i');fill.style.width=`${Math.max(0,Math.min(100,o.score))}%`;bar.append(fill);
- const head=el('div',undefined,'ai-feature-head');head.append(el('span',featureLabels[o.feature]||o.feature,'ai-feature-name'),el('span',String(o.score),'ai-score'),el('span',`${o.confidence}%`,'ai-conf'),bar);
+ const score=Math.max(0,Math.min(100,Number(o.score)||0)),conf=Math.max(0,Math.min(100,Number(o.confidence)||0));
+ row.style.setProperty('--conf',String(conf/100));
+ const confidence=el('span',undefined,'ai-conf');confidence.dataset.level=conf>=70?'high':conf>=40?'mid':'low';confidence.title=`Pewność modelu: ${conf}%`;confidence.setAttribute('role','img');confidence.setAttribute('aria-label',`pewność ${conf}%`);for(let i=0;i<3;i++)confidence.append(el('i'));
+ const bar=el('span',undefined,'ai-bar'),fill=el('i');fill.style.width=`${score}%`;bar.append(fill);bar.setAttribute('aria-hidden','true');
+ const head=el('div',undefined,'ai-feature-head');head.append(el('span',featureLabels[o.feature]||o.feature,'ai-feature-name'),confidence,el('span',String(o.score),'ai-score'));
  const reason=el('p',o.reason||'','ai-reason');reason.title=o.reason||'';
- row.append(head,reason);
+ row.append(head,bar,reason);
  return row;
 }
 
@@ -73,7 +80,9 @@ function profileSection(p){
 function mapSection(p){
  const box=section('Lokalizacja','detail-map-section');
  const holder=el('div',undefined,'detail-map');holder.id='detail-map';
- box.append(holder,el('p',`${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`,'hint'));
+ const tools=el('div',undefined,'detail-map-tools');
+ tools.append(link('Google Earth 3D ↗',earth3dLink(p)),link('Google Maps satelita ↗',googleSatelliteLink(p)),el('span',`${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`,'hint'));
+ box.append(holder,tools,el('p','Podkład przełączysz ikoną warstw w rogu mapy (OSM · satelita · satelita + rzeźba terenu). Prawdziwy widok 3D z nachyleniem otwiera Google Earth.','hint'));
  return box;
 }
 
@@ -81,9 +90,12 @@ function mapSection(p){
 function mountMap(p){
  if(detailMap){detailMap.remove();detailMap=null;}
  const holder=$('detail-map');if(!holder||!window.L)return;
- if(!$('tiles').checked){holder.replaceWith(el('p','Podkład mapy wyłączony — włącz „Podkład OpenStreetMap online” w ustawieniach.','hint'));return;}
- detailMap=L.map(holder,{scrollWheelZoom:false}).setView([p.lat,p.lon],14);
- L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(detailMap);
+ if(!$('tiles').checked){holder.replaceWith(el('p','Podkład mapy wyłączony — włącz „Podkłady map online” w ustawieniach.','hint'));return;}
+ detailMap=L.map(holder,{scrollWheelZoom:false}).setView([p.lat,p.lon],16);
+ const forest=L.tileLayer.wms(FOREST_WMS,FOREST_OPTIONS);
+ attachBasemaps(detailMap,'detail','relief',{'Zanocuj w lesie (BDL)':forest});
+ if($('forest-overlay')?.checked??true)forest.addTo(detailMap);
+ for(const r of state.routes)for(const l of r.lines)L.polyline(l.points,{color:r.color,weight:4,opacity:.9,dashArray:l.kind==='route'?'8 6':null}).addTo(detailMap).bindTooltip(r.name,{sticky:true});
  L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:3,fillColor:'#ed8d32',fillOpacity:1}).addTo(detailMap).bindTooltip(p.name,{permanent:true,direction:'top',offset:[0,-9]});
  setTimeout(()=>detailMap?.invalidateSize(),50);
 }
@@ -99,6 +111,7 @@ function commentsSection(p){
 
 function notesSection(p){
  const box=section('Twój wybór i notatka','detail-notes');
+ if(p.note_author&&(p.choice||p.user_note))box.append(el('p',`Ostatnia zmiana: ${p.note_author==='local'?'ten komputer':p.note_author}${p.note_updated?' · '+new Date(p.note_updated*1000).toLocaleString('pl-PL'):''}`,'hint'));
  const notes=el('div',undefined,'note-grid'),choiceGroup=el('div'),noteGroup=el('div'),choice=el('select');choice.id='detail-choice';for(const [v,t] of [['','Jeszcze nie wybrane'],['shortlist','Na mojej liście'],['rejected','Odrzucone przeze mnie']])choice.append(new Option(t,v));choice.value=['A','B'].includes(p.choice)?'shortlist':p.choice||'';const cl=el('label','Twój wybór');cl.htmlFor=choice.id;choiceGroup.append(cl,choice);const text=el('textarea');text.id='detail-note';text.value=p.user_note||'';text.placeholder='Dojazd, kontakt, rzeczy do sprawdzenia…';const nl=el('label','Prywatna notatka');nl.htmlFor=text.id;noteGroup.append(nl,text);notes.append(choiceGroup,noteGroup);box.append(notes);const save=el('button','Zapisz wybór i notatkę','note-save');save.onclick=async()=>{try{await api('/api/note',{key:p.key,choice:choice.value,note:text.value});p.choice=choice.value;p.user_note=text.value;render();save.textContent='Zapisano lokalnie ✓';document.querySelector('.detail-actions')?.refresh?.();}catch(e){notify(e.message,true);}};box.append(save);
  return box;
 }
@@ -114,9 +127,12 @@ function evidenceSection(p){
 
 export function showDetail(key,startPhoto=0){const p=state.places.find(x=>x.key===key);if(!p)return;state.selected=key;const root=$('detail-content');root.replaceChildren();
  root.append(el('h2',p.name,'detail-title'));
- const badges=el('div',undefined,'detail-badges');badges.append(el('span',providerName(p.source),'badge'),el('span',labels[p.type]||p.type,'badge'),el('span',p.status==='excluded'?'ODRZUCONE':p.status==='candidate'?'DOWODY ZGÓD W IMPORCIE':'DO SPRAWDZENIA','badge '+p.status),el('span',factsLine(p),'detail-facts'));root.append(badges);
+ const badges=el('div',undefined,'detail-badges');badges.append(el('span',providerName(p.source),'badge'),el('span',labels[p.type]||p.type,'badge'),el('span',p.status==='excluded'?'ODRZUCONE':p.status==='candidate'?'DOWODY ZGÓD W IMPORCIE':'DO SPRAWDZENIA','badge '+p.status),el('span',factsLine(p),'detail-facts'));if(state.routeDistance.has(p.key))badges.append(el('span','↔ '+formatDistance(state.routeDistance.get(p.key)),'route-distance'));badges.append(keyChip(p.key,'detail-key'));root.append(badges);
+ history.replaceState(null,'',placeLink(p.key));
+ if(p.source===OWN_SOURCE)root.append(el('div','Własny punkt · '+(OWN_STATUS[p.own_status]||'Na kiedyś'),'own-badge'));
+ const flags=geoFlags(p);if(flags.length){const row=el('div',undefined,'card-flags detail-flags');for(const f of flags)row.append(el('span',f));root.append(row);}
  root.append(quickActions(p));
- const links=el('div',undefined,'detail-links');links.append(googleMapLink(p));if(p.source_url)links.append(link('Źródło miejsca ↗',p.source_url));if(p.park4night_url&&p.park4night_url!==p.source_url)links.append(link('Park4Night ↗',p.park4night_url));if(p.website)links.append(link('Strona / regulamin ↗',p.website));links.append(link('Pokaż w OSM ↗',`https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=16/${p.lat}/${p.lon}`));root.append(links,el('p',`pobrano ${p.fetched_at?.slice(0,10)||'brak daty'} · data źródła ${p.source_date?.slice(0,10)||'nieznana'} · ${p.analysis_mode} · pokrycie danych ${p.evidence_coverage}%`,'hint'));
+ const links=el('div',undefined,'detail-links');links.append(googleMapLink(p));if(p.source_url)links.append(link('Źródło miejsca ↗',p.source_url));if(p.p4n_url&&p.p4n_url!==p.source_url)links.append(link('P4N ↗',p.p4n_url));if(p.website)links.append(link('Strona / regulamin ↗',p.website));links.append(link('Pokaż w OSM ↗',`https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=16/${p.lat}/${p.lon}`));root.append(links,el('p',`pobrano ${p.fetched_at?.slice(0,10)||'brak daty'} · data źródła ${p.source_date?.slice(0,10)||'nieznana'} · ${p.analysis_mode} · pokrycie danych ${p.evidence_coverage}%`,'hint detail-meta'));
  const availablePhotos=p.photos.filter(ph=>ph.url.startsWith('data:image/')||state.photoCache[ph.url]||$('remote-photos').checked);
  root.append(detailGallery(p,availablePhotos,startPhoto));
  if(p.photos.length&&!$('remote-photos').checked)root.append(el('p','Zdjęcia dostępne: włącz „Wyświetlaj zdjęcia z internetu” w ustawieniach.','hint'));
@@ -131,7 +147,7 @@ export function showDetail(key,startPhoto=0){const p=state.places.find(x=>x.key=
  root.append(notesSection(p));
  root.append(evidenceSection(p));
  const nearby=state.places.filter(x=>x.key!==p.key&&x.source!==p.source&&distance(p,x)<150).sort((a,b)=>distance(p,a)-distance(p,b)).slice(0,6);if(nearby.length){const group=el('div',undefined,'nearby');group.append(el('h3','W pobliżu w innych źródłach'),el('p','Możliwy duplikat lub sąsiedni obiekt — rekordów nie scalamy bez sprawdzenia.'));for(const n of nearby){const b=el('button',`${n.name} · ${providerName(n.source)} · ${Math.round(distance(p,n))} m`);b.onclick=()=>showDetail(n.key);group.append(b);}root.append(group);}
- root.append(el('p',p.license||'Warunki oryginalnego źródła','hint'));const raw=el('details');raw.append(el('summary','Oryginalny rekord źródłowy'),el('pre',JSON.stringify(p.raw||{},null,2),'source-raw'));root.append(raw);
+ root.append(el('p',p.license||'Warunki oryginalnego źródła','hint'));const raw=el('details',undefined,'detail-raw');raw.append(el('summary','Oryginalny rekord źródłowy'),el('pre',JSON.stringify(p.raw||{},null,2),'source-raw'));root.append(raw);
  if(!$('detail').open)$('detail').showModal();
  mountMap(p);
 }

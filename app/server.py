@@ -1,5 +1,7 @@
 """Uruchomienie lokalnego serwera Prześwitu (uvicorn na 127.0.0.1:8765)."""
+
 import uvicorn
+
 from .security import HOST, PORT
 from .web import create_app
 

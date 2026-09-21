@@ -1,33 +1,48 @@
 """Aplikacja FastAPI: pliki statyczne, nagłówki bezpieczeństwa, obsługa błędów, cykl życia procesów w tle."""
+
 import logging
 import mimetypes
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from . import __version__
-from . import ai_runtime
-from . import api
-from . import importers
-from . import photo_cache
-from . import profiles
+
+from . import __version__, ai_runtime, api, importers, photo_cache, profiles
 from . import storage as store
 from .security import MAX_BODY_BYTES, SECURITY_HEADERS, host_ok
 
 ROOT = Path(__file__).resolve().parent.parent
-STATIC = ROOT / 'static'
+STATIC = Path(__file__).resolve().parent / 'static'
 EXAMPLES = ROOT / 'examples'
+SEED = ROOT / 'seed' / 'places_pl.pack'
 PROFILE_WORKER_JOIN_S = 250
 
 # Rejestr Windows potrafi mapować .js na text/plain; moduły ES wymagają typu JavaScript.
 mimetypes.add_type('text/javascript', '.js')
 mimetypes.add_type('text/css', '.css')
 mimetypes.add_type('image/svg+xml', '.svg')
+
+
+def seed_if_empty():
+    """Pierwsze uruchomienie: pusta baza dostaje dołączony zbiór miejsc (seed/), żeby było co przeglądać od razu."""
+    if not SEED.exists() or store.get_setting('seed_imported') or store.database_info()['counts']['places']:
+        return
+    from .core import normalize
+    from .p4n.pipeline import load_seed
+
+    spots = load_seed(SEED).get('spots', [])
+    saved = 0
+    for i in range(0, len(spots), 1000):
+        places, _ = normalize({'spots': spots[i : i + 1000]})
+        saved += store.upsert(places)
+    store.set_setting('seed_imported', dict(file=SEED.name, places=saved))
+    print(f'Wczytano zbiór startowy: {saved} miejsc z {SEED.name}', flush=True)
 
 
 def error(message: str, status: int) -> JSONResponse:
@@ -43,6 +58,7 @@ def create_app(start_workers: bool = False) -> FastAPI:
         store.init()
         profiles.init()
         photo_cache.init()
+        seed_if_empty()
         stop = threading.Event()
         profile_worker = None
         if start_workers:
@@ -64,7 +80,9 @@ def create_app(start_workers: bool = False) -> FastAPI:
     async def guard(request: Request, call_next):
         if not host_ok(request):
             response = error('Host rejected', 403)
-        elif request.method == 'POST' and not 0 < int(request.headers.get('content-length', '0') or 0) <= MAX_BODY_BYTES:
+        elif (
+            request.method == 'POST' and not 0 < int(request.headers.get('content-length', '0') or 0) <= MAX_BODY_BYTES
+        ):
             response = error('Limit żądania: 28 MB.', 400)
         else:
             try:
@@ -102,6 +120,12 @@ def create_app(start_workers: bool = False) -> FastAPI:
 
     app.include_router(api.read)
     app.include_router(api.write)
+
+    @app.get('/sw.js', include_in_schema=False)
+    def service_worker():
+        return FileResponse(
+            STATIC / 'sw.js', media_type='text/javascript; charset=utf-8', headers={'Service-Worker-Allowed': '/'}
+        )
 
     @app.get('/', include_in_schema=False)
     def index():

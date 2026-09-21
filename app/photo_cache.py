@@ -1,99 +1,234 @@
 """Slow persistent cache of already imported image URLs, never a site crawler."""
-import hashlib,json,os,re,shutil,threading,time
+
+import hashlib
+import os
+import re
+import shutil
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
+
 from . import storage as store
-LIMIT=50*1024**3
+
+LIMIT = 50 * 1024**3
 # Równoległe pobieranie: do CONCURRENCY żądań naraz, starty żądań rozłożone co MIN_INTERVAL s (globalnie).
-CONCURRENCY=max(1,min(10,int(os.getenv('PRZESWIT_PHOTO_PARALLEL','6'))))
-MIN_INTERVAL=0.25
-LOCK=threading.Lock();LAST_FETCH=0
-NET=threading.BoundedSemaphore(CONCURRENCY)
-INFLIGHT={};INFLIGHT_LOCK=threading.Lock()
+CONCURRENCY = max(1, min(10, int(os.getenv('PRZESWIT_PHOTO_PARALLEL', '6'))))
+MIN_INTERVAL = 0.25
+PREFETCH_RESERVE = 2
+LOCK = threading.Lock()
+LAST_FETCH = 0
+NET = threading.BoundedSemaphore(CONCURRENCY)
+INFLIGHT = {}
+INFLIGHT_LOCK = threading.Lock()
+
 
 def _url_lock(k):
     """Jedna blokada na adres: ten sam URL nigdy nie jest pobierany dwa razy równocześnie."""
-    with INFLIGHT_LOCK:return INFLIGHT.setdefault(k,threading.Lock())
+    with INFLIGHT_LOCK:
+        return INFLIGHT.setdefault(k, threading.Lock())
+
 
 def _throttle():
     global LAST_FETCH
     with LOCK:
-        wait=max(0,MIN_INTERVAL-(time.monotonic()-LAST_FETCH));LAST_FETCH=time.monotonic()+wait
-    if wait:time.sleep(wait)
+        wait = max(0, MIN_INTERVAL - (time.monotonic() - LAST_FETCH))
+        LAST_FETCH = time.monotonic() + wait
+    if wait:
+        time.sleep(wait)
+
 
 def init():
-    with store.connect() as db:db.execute('create table if not exists photo_cache (key text primary key,url text unique,status text,size integer,error text,retry_at real,updated real)')
-def key(url):return hashlib.sha256(url.encode()).hexdigest()
-def folder():
-    p=store.DATA/'photos';p.mkdir(parents=True,exist_ok=True);return p
+    with store.connect() as db:
+        db.execute(
+            'create table if not exists photo_cache (key text primary key,url text unique,status text,size integer,error text,retry_at real,updated real)'
+        )
 
-def get(url,fetch):
-    k=key(url)
+
+def key(url):
+    return hashlib.sha256(url.encode()).hexdigest()
+
+
+def folder():
+    p = store.DATA / 'photos'
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def get(url, fetch):
+    k = key(url)
     with _url_lock(k):
-        path=folder()/k
-        with store.connect() as db:row=db.execute('select * from photo_cache where key=?',(k,)).fetchone()
-        if row and row['status']=='ready' and path.exists():return path.read_bytes()
-        host=urlparse(url).hostname or ''
-        if store.get_setting('photo_backoff:'+host,0)>time.time():raise ValueError('Serwer zdjęć chwilowo niedostępny; pobieranie dla źródła odłożone.')
-        if row and row['retry_at']>time.time():raise ValueError(row['error'] or 'Pobieranie zdjęcia odłożone.')
-        with store.connect() as db:used=db.execute("select coalesce(sum(size),0) from photo_cache where status='ready'").fetchone()[0]
-        if used>=LIMIT or shutil.disk_usage(folder()).free<2*1024**3:raise ValueError('Pamięć zdjęć pełna lub mniej niż 2 GB wolnego dysku.')
+        path = folder() / k
+        with store.connect() as db:
+            row = db.execute('select * from photo_cache where key=?', (k,)).fetchone()
+        if row and row['status'] == 'ready' and path.exists():
+            return path.read_bytes()
+        host = urlparse(url).hostname or ''
+        if store.get_setting('photo_backoff:' + host, 0) > time.time():
+            raise ValueError('Serwer zdjęć chwilowo niedostępny; pobieranie dla źródła odłożone.')
+        if row and row['retry_at'] > time.time():
+            raise ValueError(row['error'] or 'Pobieranie zdjęcia odłożone.')
+        with store.connect() as db:
+            used = db.execute("select coalesce(sum(size),0) from photo_cache where status='ready'").fetchone()[0]
+        if used >= LIMIT or shutil.disk_usage(folder()).free < 2 * 1024**3:
+            raise ValueError('Pamięć zdjęć pełna lub mniej niż 2 GB wolnego dysku.')
         with NET:
             _throttle()
             try:
-                data=fetch()
-                if used+len(data)>LIMIT:raise ValueError('Limit pamięci zdjęć: 50 GB.')
-                partial=path.with_suffix('.partial');partial.write_bytes(data);partial.replace(path)
-                with store.connect() as db:db.execute('insert or replace into photo_cache values(?,?,?,?,?,?,?)',(k,url,'ready',len(data),None,0,time.time()))
+                data = fetch()
+                if used + len(data) > LIMIT:
+                    raise ValueError('Limit pamięci zdjęć: 50 GB.')
+                partial = path.with_suffix('.partial')
+                partial.write_bytes(data)
+                partial.replace(path)
+                with store.connect() as db:
+                    db.execute(
+                        'insert or replace into photo_cache values(?,?,?,?,?,?,?)',
+                        (k, url, 'ready', len(data), None, 0, time.time()),
+                    )
                 return data
             except Exception as e:
-                if getattr(e,'code',None) in (401,403,429):store.set_setting('photo_backoff:'+host,time.time()+86400)
-                with store.connect() as db:db.execute('insert or replace into photo_cache values(?,?,?,?,?,?,?)',(k,url,'error',0,str(e)[:300],time.time()+86400,time.time()))
+                if getattr(e, 'code', None) in (401, 403, 429):
+                    store.set_setting('photo_backoff:' + host, time.time() + 86400)
+                with store.connect() as db:
+                    db.execute(
+                        'insert or replace into photo_cache values(?,?,?,?,?,?,?)',
+                        (k, url, 'error', 0, str(e)[:300], time.time() + 86400, time.time()),
+                    )
                 raise
 
+
+MAX_OWN_IMAGE = 6_000_000
+
+
+def valid_image(data):
+    return (
+        data.startswith(b'\xff\xd8\xff')
+        or data.startswith(b'\x89PNG\r\n\x1a\n')
+        or (data[:4] == b'RIFF' and data[8:12] == b'WEBP')
+    )
+
+
+def store_own(data):
+    """Zapisuje własne zdjęcie użytkownika w cache (adres own://<sha256 treści>) i zwraca ten adres."""
+    if not isinstance(data, bytes) or not data:
+        raise ValueError('Pusty plik.')
+    if len(data) > MAX_OWN_IMAGE:
+        raise ValueError('Zdjęcie przekracza limit 6 MB.')
+    if not valid_image(data):
+        raise ValueError('Obsługiwane formaty: JPEG, PNG, WebP.')
+    url = 'own://' + hashlib.sha256(data).hexdigest()
+    k = key(url)
+    path = folder() / k
+    if not path.exists():
+        partial = path.with_suffix('.partial')
+        partial.write_bytes(data)
+        partial.replace(path)
+    with store.connect() as db:
+        db.execute(
+            'insert or replace into photo_cache values(?,?,?,?,?,?,?)',
+            (k, url, 'ready', len(data), None, 0, time.time()),
+        )
+    return url
+
+
+def read_own(url):
+    path = folder() / key(url)
+    if not url.startswith('own://') or not path.is_file():
+        raise ValueError('Brak pliku własnego zdjęcia.')
+    return path.read_bytes()
+
+
+def delete_own(url):
+    """Usuwa własne zdjęcie z cache, o ile żadne inne miejsce już go nie używa (ten sam plik = ten sam adres)."""
+    used = any(url == ph.get('url') for p in store.all_places() for ph in p.get('photos', []))
+    if used:
+        return
+    with store.connect() as db:
+        db.execute('delete from photo_cache where url=?', (url,))
+    path = folder() / key(url)
+    if path.exists():
+        path.unlink()
+
+
 def url_map():
-    with store.connect() as db:rows=db.execute("select key,url from photo_cache where status='ready'").fetchall()
-    return {r['url']:'/photos/'+r['key'] for r in rows if (folder()/r['key']).exists()}
+    with store.connect() as db:
+        rows = db.execute("select key,url from photo_cache where status='ready'").fetchall()
+    return {r['url']: '/photos/' + r['key'] for r in rows if (folder() / r['key']).exists()}
+
+
 def read(k):
-    if not re.fullmatch('[a-f0-9]{64}',k):return None
-    path=folder()/k
-    if not path.is_file():return None
-    data=path.read_bytes();mime='image/jpeg' if data.startswith(b'\xff\xd8') else 'image/png' if data.startswith(b'\x89PNG') else 'image/webp'
-    return data,mime
+    if not re.fullmatch('[a-f0-9]{64}', k):
+        return None
+    path = folder() / k
+    if not path.is_file():
+        return None
+    data = path.read_bytes()
+    mime = (
+        'image/jpeg' if data.startswith(b'\xff\xd8') else 'image/png' if data.startswith(b'\x89PNG') else 'image/webp'
+    )
+    return data, mime
+
 
 def status():
     with store.connect() as db:
-        rows=db.execute('select status,count(*) n,coalesce(sum(size),0) bytes from photo_cache group by status').fetchall()
-    return dict(counts={r['status']:r['n'] for r in rows},bytes=sum(r['bytes'] for r in rows),limit=LIMIT,path=str(folder()),paused=bool(store.get_setting('photos_paused',False)),parallel=CONCURRENCY)
+        rows = db.execute(
+            'select status,count(*) n,coalesce(sum(size),0) bytes from photo_cache group by status'
+        ).fetchall()
+    return dict(
+        counts={r['status']: r['n'] for r in rows},
+        bytes=sum(r['bytes'] for r in rows),
+        limit=LIMIT,
+        path=str(folder()),
+        paused=bool(store.get_setting('photos_paused', False)),
+        parallel=CONCURRENCY,
+    )
+
+
 def pending_urls():
     """Adresy z zaimportowanych rekordów (tylko znane hosty), które nie mają jeszcze gotowego pliku w cache."""
     from . import local_vision as vision
-    ready=set(url_map())
-    seen=set();out=[]
+
+    ready = set(url_map())
+    seen = set()
+    out = []
     for p in store.all_places():
-        for ph in p.get('photos',[]):
-            url=ph.get('url','')
-            if url in seen or url in ready or urlparse(url).hostname not in vision.HOSTS:continue
-            seen.add(url);out.append(url)
+        for ph in p.get('photos', []):
+            url = ph.get('url', '')
+            if url in seen or url in ready or urlparse(url).hostname not in vision.HOSTS:
+                continue
+            seen.add(url)
+            out.append(url)
     return out
+
 
 def worker(stop):
     """Pobieranie wyprzedzające w tle: CONCURRENCY wątków, wstrzymywane ustawieniem photos_paused."""
     from . import local_vision as vision
-    pool=ThreadPoolExecutor(CONCURRENCY,thread_name_prefix='photo')
+
+    # Pobieranie wyprzedzające zostawia PREFETCH_RESERVE wolnych slotów dla analiz na żądanie (profilowanie, karta miejsca).
+    workers = max(1, CONCURRENCY - PREFETCH_RESERVE)
+    pool = ThreadPoolExecutor(workers, thread_name_prefix='photo')
     try:
         while not stop.is_set():
             try:
-                futures=[]
+                futures = []
                 for url in pending_urls():
-                    if stop.is_set():return
-                    if store.get_setting('photos_paused',False):break
-                    futures.append(pool.submit(vision.image_bytes,url))
-                    while sum(not f.done() for f in futures)>=CONCURRENCY*2:
-                        if stop.wait(.1):return
+                    if stop.is_set():
+                        return
+                    if store.get_setting('photos_paused', False):
+                        break
+                    futures.append(pool.submit(vision.image_bytes, url))
+                    while sum(not f.done() for f in futures) >= workers * 2:
+                        if stop.wait(0.1):
+                            return
                 for f in futures:
-                    try:f.result()
-                    except Exception:pass
-            except Exception:pass
+                    try:
+                        f.result()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
             stop.wait(30)
-    finally:pool.shutdown(wait=False,cancel_futures=True)
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)

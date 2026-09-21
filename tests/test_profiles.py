@@ -1,95 +1,241 @@
-import unittest
-from unittest.mock import patch
 import tempfile
+import unittest
 from pathlib import Path
+from unittest.mock import patch
+
 from app import profiles as p
 from app import storage as s
+
+
 class ProfileTests(unittest.TestCase):
     def test_unknown_does_not_match_required(self):
-        q={'conditions':[dict(feature='river',target=100,weight=5,required=True)]}
-        r=p.score_profile({'observations':[]},q)
-        self.assertEqual(r['match'],0);self.assertFalse(r['requirements_met']);self.assertEqual(r['coverage'],0)
+        q = {'conditions': [dict(feature='river', target=100, weight=5, required=True)]}
+        r = p.score_profile({'observations': []}, q)
+        self.assertEqual(r['match'], 0)
+        self.assertFalse(r['requirements_met'])
+        self.assertEqual(r['coverage'], 0)
+
     def test_negative_preference(self):
-        q={'conditions':[dict(feature='mud',target=0,weight=1,required=True)]}
-        r=p.score_profile({'observations':[dict(feature='mud',score=100,confidence=100,reason='błoto')]},q)
-        self.assertEqual(r['match'],0);self.assertFalse(r['requirements_met'])
+        q = {'conditions': [dict(feature='mud', target=0, weight=1, required=True)]}
+        r = p.score_profile({'observations': [dict(feature='mud', score=100, confidence=100, reason='błoto')]}, q)
+        self.assertEqual(r['match'], 0)
+        self.assertFalse(r['requirements_met'])
+
     def test_query_unknown_feature(self):
-        with self.assertRaises(ValueError):p.validate_query(dict(interpretation='x',unsupported=[],conditions=[dict(feature='legal',target=100,weight=1,required=True)]))
+        with self.assertRaises(ValueError):
+            p.validate_query(
+                dict(
+                    interpretation='x',
+                    unsupported=[],
+                    conditions=[dict(feature='legal', target=100, weight=1, required=True)],
+                )
+            )
+
     def test_photo_reference_must_exist(self):
-        a=dict(summary='x',scenes=[],unknown=[],warnings=[],observations=[dict(feature='river',score=90,confidence=90,reason='rzeka',evidence=['photo:0'])])
-        with self.assertRaises(ValueError):p.validate_profile(a,{'description'})
+        a = dict(
+            summary='x',
+            scenes=[],
+            unknown=[],
+            warnings=[],
+            observations=[dict(feature='river', score=90, confidence=90, reason='rzeka', evidence=['photo:0'])],
+        )
+        with self.assertRaises(ValueError):
+            p.validate_profile(a, {'description'})
+
     def test_queue_survives_restart_and_invalidates_changed_source(self):
-        with tempfile.TemporaryDirectory() as folder,patch.object(s,'DATA',Path(folder)):
-            s.init();p.init();place=dict(source='test',id='1',name='Pierwsze',photos=[])
-            s.upsert([place]);p.sync_queue()
-            with s.connect() as db:db.execute("update profiles set status='running'")
-            p.init();self.assertEqual(p.profiles_map()['test:1']['status'],'pending')
-            with s.connect() as db:db.execute("update profiles set status='ready',body='{}'")
-            p.sync_queue();self.assertEqual(p.profiles_map()['test:1']['status'],'ready')
-            place['name']='Zmienione';s.upsert([place]);p.sync_queue();self.assertEqual(p.profiles_map()['test:1']['status'],'pending')
+        with tempfile.TemporaryDirectory() as folder, patch.object(s, 'DATA', Path(folder)):
+            s.init()
+            p.init()
+            place = dict(source='test', id='1', name='Pierwsze', photos=[])
+            s.upsert([place])
+            p.sync_queue()
+            with s.connect() as db:
+                db.execute("update profiles set status='running'")
+            p.init()
+            self.assertEqual(p.profiles_map()['test:1']['status'], 'pending')
+            with s.connect() as db:
+                db.execute("update profiles set status='ready',body='{}'")
+            p.sync_queue()
+            self.assertEqual(p.profiles_map()['test:1']['status'], 'ready')
+            place['name'] = 'Zmienione'
+            s.upsert([place])
+            p.sync_queue()
+            self.assertEqual(p.profiles_map()['test:1']['status'], 'pending')
+
     def test_query_confidence_reduces_score(self):
-        r=p.score_profile({'observations':[dict(feature='river',score=100,confidence=20,reason='wzmianka')]},{'conditions':[dict(feature='river',target=100,weight=1,required=False)]})
-        self.assertEqual(r['match'],20)
+        r = p.score_profile(
+            {'observations': [dict(feature='river', score=100, confidence=20, reason='wzmianka')]},
+            {'conditions': [dict(feature='river', target=100, weight=1, required=False)]},
+        )
+        self.assertEqual(r['match'], 20)
 
     def test_query_discards_invented_preference(self):
-        q=dict(interpretation='polana',unsupported=['pogoda'],conditions=[dict(feature='meadow',target=100,weight=5,required=True,quote='polany'),dict(feature='river',target=0,weight=1,required=False,quote='bez rzeki')])
-        result=p.validate_query(q,'Szukam polany')
-        self.assertEqual(len(result['conditions']),1)
+        q = dict(
+            interpretation='polana',
+            unsupported=['pogoda'],
+            conditions=[
+                dict(feature='meadow', target=100, weight=5, required=True, quote='polany'),
+                dict(feature='river', target=0, weight=1, required=False, quote='bez rzeki'),
+            ],
+        )
+        result = p.validate_query(q, 'Szukam polany')
+        self.assertEqual(len(result['conditions']), 1)
         self.assertFalse(result['conditions'][0]['required'])
-        self.assertEqual(result['unsupported'],[])
+        self.assertEqual(result['unsupported'], [])
+
     def test_explicit_required_preference(self):
-        q=dict(interpretation='bez zabudowy',unsupported=[],conditions=[dict(feature='low_buildings',target=100,weight=5,required=True,quote='Koniecznie bez zabudowy')])
-        self.assertTrue(p.validate_query(q,'Koniecznie bez zabudowy')['conditions'][0]['required'])
+        q = dict(
+            interpretation='bez zabudowy',
+            unsupported=[],
+            conditions=[
+                dict(feature='low_buildings', target=100, weight=5, required=True, quote='Koniecznie bez zabudowy')
+            ],
+        )
+        self.assertTrue(p.validate_query(q, 'Koniecznie bez zabudowy')['conditions'][0]['required'])
 
     def test_text_and_latest_comments_are_sent_with_metadata(self):
-        place=dict(description='Rzeka 300 m, bez toalety',type='camp_site',geo={},fee='30 PLN',comments=[dict(text='stara relacja',date='2020-01-01'),dict(text='nowy szlaban',date='2026-09-01')],evidence=[])
-        sources,coverage=p.source_material(place)
-        self.assertEqual(sources[0]['text'],place['description'])
-        comments=[x for x in sources if x['id'].startswith('comment:')]
-        self.assertEqual(comments[0]['id'],'comment:1')
-        self.assertEqual(comments[0]['data']['text'],'nowy szlaban')
-        self.assertEqual(coverage['comments_used'],2)
-        self.assertEqual(next(x for x in sources if x['id']=='metadata')['data']['fee'],'30 PLN')
+        place = dict(
+            description='Rzeka 300 m, bez toalety',
+            type='camp_site',
+            geo={},
+            fee='30 PLN',
+            comments=[dict(text='stara relacja', date='2020-01-01'), dict(text='nowy szlaban', date='2026-09-01')],
+            evidence=[],
+        )
+        sources, coverage = p.source_material(place)
+        self.assertEqual(sources[0]['text'], place['description'])
+        comments = [x for x in sources if x['id'].startswith('comment:')]
+        self.assertEqual(comments[0]['id'], 'comment:1')
+        self.assertEqual(comments[0]['data']['text'], 'nowy szlaban')
+        self.assertEqual(coverage['comments_used'], 2)
+        self.assertEqual(next(x for x in sources if x['id'] == 'metadata')['data']['fee'], '30 PLN')
 
     def test_comment_change_invalidates_profile(self):
-        place=dict(name='Test',description='Opis',comments=[dict(text='Cicho',date='2020-01-01')])
-        before=p.digest(place)
-        place['comments']=[dict(text='Nowy szlaban',date='2026-09-18')]
-        self.assertNotEqual(before,p.digest(place))
+        place = dict(name='Test', description='Opis', comments=[dict(text='Cicho', date='2020-01-01')])
+        before = p.digest(place)
+        place['comments'] = [dict(text='Nowy szlaban', date='2026-09-18')]
+        self.assertNotEqual(before, p.digest(place))
+
     def test_comment_limit_is_explicit(self):
-        place=dict(description='x',comments=[dict(text=str(i),date=f'2026-09-{i+1:02d}') for i in range(20)])
-        sources,c=p.source_material(place)
-        self.assertEqual(c['comments_total'],20)
-        self.assertEqual(c['comments_used'],15)
-        self.assertEqual(next(x for x in sources if x['id'].startswith('comment:'))['data']['text'],'19')
+        place = dict(description='x', comments=[dict(text=str(i), date=f'2026-09-{i + 1:02d}') for i in range(20)])
+        sources, c = p.source_material(place)
+        self.assertEqual(c['comments_total'], 20)
+        self.assertEqual(c['comments_used'], 15)
+        self.assertEqual(next(x for x in sources if x['id'].startswith('comment:'))['data']['text'], '19')
 
 
 class DerivedScoreTests(unittest.TestCase):
-    def profile(self,*observations):
-        return dict(status='ready',fingerprint='x',profile=dict(summary='',observations=[dict(feature=f,score=s,confidence=c,reason='',evidence=[]) for f,s,c in observations]))
+    def profile(self, *observations):
+        return dict(
+            status='ready',
+            fingerprint='x',
+            profile=dict(
+                summary='',
+                observations=[
+                    dict(feature=f, score=s, confidence=c, reason='', evidence=[]) for f, s, c in observations
+                ],
+            ),
+        )
 
     def test_metrics_from_features(self):
-        ai=p.as_ai(self.profile(('panorama',85,80),('river',70,60),('road_access',90,90),('quiet',60,50)))
-        self.assertEqual(ai['scores'],dict(scenic=85,water=70,adv_access=90,solitude=60))
-        self.assertEqual(ai['mode'],'Profil AI (lokalny) + reguły')
+        ai = p.as_ai(self.profile(('panorama', 85, 80), ('river', 70, 60), ('road_access', 90, 90), ('quiet', 60, 50)))
+        self.assertEqual(ai['scores'], dict(scenic=85, water=70, adv_access=90, solitude=60))
+        self.assertEqual(ai['mode'], 'Profil AI (lokalny) + reguły')
         self.assertTrue(any(r.startswith('Widok: rozległa panorama 85/100') for r in ai['reasons']))
 
     def test_low_confidence_and_negatives(self):
-        ai=p.as_ai(self.profile(('panorama',90,20),('road_access',90,90),('barriers',80,70)))
+        ai = p.as_ai(self.profile(('panorama', 90, 20), ('road_access', 90, 90), ('barriers', 80, 70)))
         self.assertIsNone(ai['scores']['scenic'])
-        self.assertEqual(ai['scores']['adv_access'],20)
+        self.assertEqual(ai['scores']['adv_access'], 20)
 
     def test_not_ready_or_empty_returns_none(self):
         self.assertIsNone(p.as_ai(None))
-        self.assertIsNone(p.as_ai(dict(status='pending',profile=None)))
-        self.assertIsNone(p.as_ai(self.profile(('toilet',100,100))))
+        self.assertIsNone(p.as_ai(dict(status='pending', profile=None)))
+        self.assertIsNone(p.as_ai(self.profile(('toilet', 100, 100))))
 
     def test_rank_merge_keeps_rule_scores(self):
         from app.core import rank
-        spot=dict(id='1',source='own-notes',name='x',lat=50.0,lon=16.0,type='nature',description='',comments=[],photos=[],geo={'water_distance_m':20},evidence=[])
-        ai=p.as_ai(self.profile(('panorama',85,80)))
-        r=rank(spot,ai,merge=True)
-        self.assertEqual(r['scores']['scenic'],85)
-        self.assertEqual(r['scores']['water'],95)
-        self.assertEqual(r['analysis_mode'],'Profil AI (lokalny) + reguły')
-        self.assertEqual(rank(spot,ai)['scores']['water'],None)
+
+        spot = dict(
+            id='1',
+            source='own-notes',
+            name='x',
+            lat=50.0,
+            lon=16.0,
+            type='nature',
+            description='',
+            comments=[],
+            photos=[],
+            geo={'water_distance_m': 20},
+            evidence=[],
+        )
+        ai = p.as_ai(self.profile(('panorama', 85, 80)))
+        r = rank(spot, ai, merge=True)
+        self.assertEqual(r['scores']['scenic'], 85)
+        self.assertEqual(r['scores']['water'], 95)
+        self.assertEqual(r['analysis_mode'], 'Profil AI (lokalny) + reguły')
+        self.assertEqual(rank(spot, ai)['scores']['water'], None)
+
+
+class ValidateProfileTests(unittest.TestCase):
+    def observation(self, feature, score, confidence):
+        return dict(feature=feature, score=score, confidence=confidence, reason='r', evidence=['description'])
+
+    def test_repeated_feature_keeps_most_confident(self):
+        a = dict(
+            summary='s',
+            scenes=[],
+            unknown=[],
+            warnings=[],
+            observations=[
+                self.observation('privacy', 60, 50),
+                self.observation('privacy', 80, 90),
+                self.observation('privacy', 70, 90),
+                self.observation('forest', 50, 50),
+            ],
+        )
+        out = p.validate_profile(a, {'description'})
+        by = {o['feature']: o for o in out['observations']}
+        self.assertEqual(sorted(by), ['forest', 'privacy'])
+        self.assertEqual((by['privacy']['score'], by['privacy']['confidence']), (80, 90))
+
+    def test_unknown_feature_rejected(self):
+        a = dict(summary='s', scenes=[], unknown=[], warnings=[], observations=[self.observation('unicorn', 60, 50)])
+        with self.assertRaises(ValueError):
+            p.validate_profile(a, {'description'})
+
+
+class GroundingTests(unittest.TestCase):
+    def test_text_observations_need_matching_quote(self):
+        place = dict(
+            name='Polana',
+            description='Free night on the river bank, trains run overnight.',
+            comments=[dict(text='Very quiet in the morning')],
+            evidence=[],
+            geo={'p4n_wc_public': True},
+            raw={'full': {'prix_stationnement': 'gratuit'}},
+        )
+
+        def obs(feature, reason, evidence, confidence=80):
+            return dict(feature=feature, score=80, confidence=confidence, reason=reason, evidence=evidence)
+
+        a = dict(
+            observations=[
+                obs('river', '„river bank” — opis wskazuje rzekę', ['description']),
+                obs('panorama', '„rozległa panorama” — opis', ['description']),
+                obs('quiet', '„very quiet” z komentarza', ['comment:0']),
+                obs('low_traffic', 'opis sugeruje mały ruch', ['description']),
+                obs('forest', 'widoczny las', ['photo:0']),
+                obs('toilet', '„wc_public” w geo', ['geo']),
+                obs('free_cost', 'gratuit', ['metadata']),
+            ]
+        )
+        out = p.ground_text_observations(a, place)
+        feats = {o['feature']: o for o in out['observations']}
+        self.assertEqual(out['dropped_unsupported'], ['panorama'])
+        self.assertIn('river', feats)
+        self.assertIn('quiet', feats)
+        self.assertIn('forest', feats)
+        self.assertIn('toilet', feats)
+        self.assertIn('free_cost', feats)
+        self.assertEqual(feats['low_traffic']['confidence'], 50)

@@ -13,8 +13,10 @@ data/
 inbox/*
 !inbox/.gitkeep
 
-# Sekrety
+# Sekrety i logi
 .env
+przeswit.env
+*.log
 
 # IDE / OS
 .idea/

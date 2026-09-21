@@ -1,6 +1,6 @@
 # Weryfikacja Prześwitu — 2026-09-18
 
-34 testy backendu zakończone powodzeniem. static/app.js przeszedł sprawdzenie składni Node.
+34 testy backendu zakończone powodzeniem. moduły ES w `app/static/js/` przeszły sprawdzenie składni Node.
 Przeniesienie SQLite: suma SHA-256 przed i po identyczna; integrity_check = ok, 1163 miejsca.
 W przeglądarce sprawdzono galerię z rzeczywistymi zdjęciami, zachowanie miejsca, trwałość wyboru po odświeżeniu, zakładkę zachowanych, odrzucenie, cofnięcie. Wybór testowy przywrócono do stanu początkowego.
 Zdjęcia są odnośnikami źródłowymi: mogą zniknąć lub wymagać internetu. Brakujące obrazy pokazują komunikat, a nie zastępczą fotografię. Automatyczne oceny nie potwierdzają legalności biwaku ani przejezdności drogi.
@@ -9,4 +9,8 @@ Automatyczne profile: 47 testów przeszło (kolejka po restarcie, zmiana danych 
 
 Baza i równoległość: 52 testy przeszły. Test 12 atomowych rezerwacji przez 4 wątki bez duplikatów; spójna kopia SQLite zachowała miejsca i notatkę, integrity_check=ok. Na rzeczywistym modelu 12B log silnika potwierdził równoczesne generowanie slot 0/task 2 i slot 1/task 0; UI pokazało 2/2, ~9 GB wolnego VRAM. Kopia dzienna utworzona dla 1163 miejsc.
 
-Cache i profilowanie: 54 testy przeszły. Dwa równoległe odczyty tego samego URL pobierają obraz raz; ponowny odczyt działa bez sieci; serwer nie przyjmuje traversal w ścieżce zdjęcia. Schemat wyklucza nieistniejące komentarze i zdjęcia. Odtworzono błąd park4night:103712 (comment:N), po ograniczeniu enum odpowiedź przeszła walidację. UI potwierdziło pobrane zdjęcia, brak bieżących błędów kolejki po ponowieniu i lokalny src /photos/... dla (58-540) Pole Namiotowe.
+Cache i profilowanie: 54 testy przeszły. Dwa równoległe odczyty tego samego URL pobierają obraz raz; ponowny odczyt działa bez sieci; serwer nie przyjmuje traversal w ścieżce zdjęcia. Schemat wyklucza nieistniejące komentarze i zdjęcia. Odtworzono błąd p4n:103712 (comment:N), po ograniczeniu enum odpowiedź przeszła walidację. UI potwierdziło pobrane zdjęcia, brak bieżących błędów kolejki po ponowieniu i lokalny src /photos/... dla (58-540) Pole Namiotowe.
+
+## Aktualizacja — 2026-09-21
+
+82 testy (`tests/`: core, importery, profile i ugruntowanie odpowiedzi modelu, cache zdjęć i pobieranie równoległe, baza, API HTTP na FastAPI TestClient, własne punkty i zdjęcia, brama publicznego hosta) przechodzą na Windows; CI powtarza je na Ubuntu i Windows. Pełny bieg profilowania (prompt v3) na 601 rzeczywistych rekordach: 601/601 gotowych, 0 błędów, ~5,4 profilu/min przy dwóch zadaniach na GPU 24 GB. Interfejs sprawdzony w przeglądarce: galeria z doładowywaniem, mapa z podkładami i lassem, trasy GPX, własne punkty ze zdjęciami, decyzje bez utraty pozycji przewijania.

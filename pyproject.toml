@@ -4,11 +4,19 @@ version = "2.0"
 description = "Lokalna biblioteka miejsc w naturze — FastAPI, SQLite, lokalna Ollama."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Proprietary" }
+license = { text = "MIT" }
+authors = [{ name = "Bartek Smok" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Framework :: FastAPI",
+]
 dependencies = [
   "fastapi>=0.115",
   "uvicorn>=0.30",
   "pydantic>=2.7",
+  "PyJWT[crypto]>=2.8",
 ]
 
 [project.optional-dependencies]
@@ -25,12 +33,19 @@ build-backend = "setuptools.build_meta"
 packages = ["app"]
 
 [tool.setuptools.package-data]
-app = ["prompts/*.md"]
+app = ["prompts/*.md", "static/*", "static/js/*", "static/vendor/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.ruff]
-line-length = 200
+line-length = 120
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E9", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "single"

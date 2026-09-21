@@ -13,10 +13,12 @@ export const state={
   photosPaused:false,
   // widok listy
   page:0,
+  shown:0,
   selected:null,
   allLibrary:true,
   collection:'new',
   undoAction:null,
+  undoTimer:null,
   // mapa
   map:null,
   layer:null,
@@ -24,6 +26,13 @@ export const state={
   forestLayer:null,
   mapView:false,
   highlight:null,
+  // planowane trasy GPX i odległości miejsc od nich
+  routes:[],
+  routeLayer:null,
+  routeDistance:new Map(),
+  // zaznaczenie lasso na mapie (klucze miejsc)
+  selection:new Set(),
+  markers:new Map(),
   // odpytywanie stanu zadań
   busy:false,
   statusTimer:null,
@@ -65,3 +74,7 @@ export function factsLine(p){
   if(p.photos.length)parts.push(`${p.photos.length} ${p.photos.length===1?'zdjęcie':p.photos.length<5?'zdjęcia':'zdjęć'}`);
   return parts.join(' · ');
 }
+
+// Flagi P4N z geo → krótkie etykiety na kaflu i w karcie.
+export const geoFlagLabels=[['viewpoint','widok'],['p4n_baignade','kąpiel'],['p4n_peche','wędkowanie'],['p4n_eaux_vives','rzeka górska'],['p4n_rando','szlaki'],['p4n_vtt','MTB'],['p4n_escalade','wspinaczka'],['p4n_moto','moto'],['p4n_point_eau','woda pitna'],['p4n_wc_public','WC'],['p4n_poubelle','śmietnik'],['p4n_donnees_mobile','zasięg'],['p4n_animaux','zwierzęta']];
+export function geoFlags(p){return geoFlagLabels.filter(([k])=>p.geo&&p.geo[k]).map(([,label])=>label);}

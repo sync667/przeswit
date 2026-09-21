@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prześwit · Twoje miejsca w naturze</title>
+<link rel="icon" href="/static/logo.svg"><link rel="manifest" href="/static/manifest.webmanifest"><meta name="theme-color" content="#203f35">
+<link rel="stylesheet" href="/static/vendor/leaflet.css">
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/vendor/leaflet.js" defer></script>
+<script type="module" src="/static/js/main.js"></script>
+</head>
+<body>
+<header>
+  <a class="brand" href="/"><img src="/static/logo.svg" alt="" width="42" height="42"><span>prześwit<small>TWOJE MIEJSCA W NATURZE</small></span></a>
+  <div class="header-right">
+    <span id="total"></span>
+    <button id="toggle-map">Mapa</button>
+    <button id="sources-button">Źródła</button>
+    <button id="open-own">＋ Własny punkt</button>
+    <button id="open-import" class="accent">＋ Importuj miejsca</button>
+  </div>
+</header>
+
+<main>
+  <dialog id="import-dialog">
+    <div class="dialog-head"><h2>Twoja lokalna biblioteka</h2><button id="close-import" aria-label="Zamknij import">✕</button></div>
+    <aside class="sidebar">
+      <div class="eyebrow">TWOJE MIEJSCA. TWOJA TRASA.</div>
+      <h3>Dodaj miejsca, wybierz swój kierunek.</h3>
+      <p class="muted">Namiot przy motocyklu, panorama albo spokojny brzeg.</p>
+
+      <label for="areas">Obszar · bbox lub link P4N / OSM</label>
+      <textarea id="areas" rows="3">16.05,50.75,16.50,51.10</textarea>
+      <div class="field-row">
+        <div><label for="radius">Promień linku (km)</label><input id="radius" type="number" min="1" max="90" value="40"></div>
+        <button id="map-area">Użyj widoku mapy</button>
+      </div>
+      <p class="hint">Bbox: zachód,południe,wschód,północ. Kilka obszarów — po jednym w wierszu. Zoom linku nie określa granic.</p>
+
+      <div class="source-picks">
+        <label><input id="source-p4n" type="checkbox" checked> P4N · publiczna próbka</label>
+        <label><input id="source-osm" type="checkbox" checked> OpenStreetMap</label>
+        <label><input id="source-bdl" type="checkbox" checked> Lasy Państwowe / Czas w Las</label>
+      </div>
+      <button id="sync" class="primary">Pobierz miejsca automatycznie ↓</button>
+      <div class="field-row"><button id="area-filter">Przeglądaj ten obszar</button><button id="all-library">Cała baza</button></div>
+
+      <details open>
+        <summary>Wczytaj swój plik JSON lub eksport</summary>
+        <p>Eksport z serwisu możesz wczytać tutaj lub wrzucić do folderu inbox — aplikacja odbierze go automatycznie.</p>
+        <label for="file-source">Źródło pliku</label>
+        <select id="file-source">
+          <option value="files">Inne / automatyczne rozpoznanie linków</option>
+          <option value="ioverlander">iOverlander · użytek osobisty</option>
+          <option value="p4n">P4N · uprawniony eksport</option>
+          <option value="campercontact">Campercontact</option>
+          <option value="campinginfo">camping.info</option>
+          <option value="own-notes">Własne punkty</option>
+        </select>
+        <label class="file-label" for="file">Wczytaj GPX / CSV / JSON / GeoJSON / ZIP</label>
+        <input id="file" type="file" accept=".gpx,.csv,.json,.geojson,.zip">
+        <p id="inbox-path" class="hint path"></p>
+        <a href="/examples/template.json" download>Szablon danych ↗</a>
+        <p class="hint">Pliki iOverlander w inbox nazwij z prefiksem ioverlander. Źródło zachowuje warunki wykorzystania.</p>
+      </details>
+
+      <details>
+        <summary>Ustawienia i oceny</summary>
+        <label class="check"><input id="tiles" type="checkbox" checked>Podkłady map online (OSM / satelita)</label>
+        <label class="check"><input id="remote-photos" type="checkbox" checked>Wyświetlaj zdjęcia z internetu</label>
+        <p id="ai-state" class="hint"></p>
+        <p class="hint">Ocena dopasowania AI odnosi się do Twojego opisu. Nie potwierdza zgody na biwak ani przejezdności drogi.</p>
+        <p class="hint">Baza i notatki działają bez internetu. Importy, zdjęcia zewnętrzne i podkład mapy potrzebują połączenia. Nie pobieramy map offline.</p>
+      </details>
+
+      <details>
+        <summary>Baza danych i kopie zapasowe</summary>
+        <p id="database-info">Trwała lokalna baza SQLite</p>
+        <button id="database-backup">Utwórz kopię teraz</button>
+        <p id="database-backup-status" role="status"></p>
+      </details>
+      <div class="sidebar-foot">Zapis lokalny · bez konta<br><span>Źródła zachowane, zgody sprawdzane osobno.</span></div>
+    </aside>
+  </dialog>
+
+  <section class="workspace">
+    <div class="topline">
+      <h1 class="visually-hidden">Miejsca</h1>
+      <div class="exports"><span class="hint">Eksport widocznych:</span><button id="export-gpx">GPX ↓</button><button id="export-csv">CSV ↓</button><button id="export-json">JSON ↓</button></div>
+    </div>
+
+    <nav class="collections" aria-label="Twoje wybory">
+      <button data-view="new" class="active">Do przejrzenia <span></span></button>
+      <button data-view="saved">Zachowane <span></span></button>
+      <button data-view="rejected">Odrzucone <span></span></button>
+      <button data-view="all">Wszystkie <span></span></button>
+    </nav>
+    <div id="notice" role="status" aria-live="polite">Wczytuję lokalną bazę…</div>
+    <div id="job-banner" hidden><progress id="job-progress" value="0" max="1"></progress><span id="job-message"></span></div>
+
+    <div class="map-shell" hidden>
+      <div id="map" aria-label="Mapa miejsc biwakowych"></div>
+      <div class="map-legend"><span class="dot green"></span> do sprawdzenia <span class="dot gold"></span> na liście <span class="dot red"></span> odrzucone</div>
+    </div>
+
+    <section class="ai-search">
+      <label for="wish">Jakiego miejsca szukasz?</label>
+      <textarea id="wish" rows="2" maxlength="2000">Spokojne miejsce w naturze na namiot obok motocykla ADV. Piękna panorama lub brzeg rzeki, mało zabudowy i ludzi. Możliwy lekki off-road.</textarea>
+      <div class="ai-controls">
+        <button id="review-page" class="accent">✦ Szukaj według opisu</button>
+        <label class="check"><input id="ai-only" type="checkbox">Tylko wyniki wyszukiwania</label>
+        <span id="local-ai-status" role="status">Sprawdzam lokalny model…</span>
+      </div>
+      <p class="hint">AI tworzy profile automatycznie po imporcie. Wyszukiwanie porównuje gotowe profile — bez ponownego czytania zdjęć. Nieznane cechy obniżają dopasowanie.</p>
+      <p id="review-progress" role="status"></p>
+      <div class="profile-queue">
+        <span id="profile-progress" role="status">Przygotowuję profile…</span>
+        <label for="parallel-mode">Równolegle</label>
+        <select id="parallel-mode"><option value="auto">Auto (do 2)</option><option value="1">1 miejsce</option><option value="2">2 miejsca</option></select>
+        <span id="resource-status"></span>
+        <button id="profile-pause">Wstrzymaj profilowanie</button>
+        <button id="profile-retry" hidden>Ponów błędy</button>
+      </div>
+      <div class="profile-queue">
+        <span id="photo-progress" role="status"></span>
+        <button id="photos-pause">Wstrzymaj zdjęcia</button>
+      </div>
+      <details id="query-details" hidden><summary>Jak AI zrozumiało wyszukiwanie?</summary><div id="query-plan"></div></details>
+    </section>
+
+    <div class="filterbar">
+      <input id="search" type="search" placeholder="Szukaj nazwy lub opisu…" aria-label="Szukaj miejsc">
+      <select id="source-filter" aria-label="Źródło"><option value="">Wszystkie źródła</option></select>
+      <select id="type-filter" aria-label="Typ miejsca">
+        <option value="">Wszystkie cechy</option>
+        <option value="viewpoint">Punkt widokowy</option>
+        <option value="water">Nad wodą (kąpiel / plaża / brzeg)</option>
+        <option value="swimming">Kąpiel</option>
+        <option value="fishing">Wędkowanie</option>
+        <option value="whitewater">Rzeka górska / kajak</option>
+        <option value="hiking">Szlaki piesze</option>
+        <option value="mtb">Trasy rowerowe / MTB</option>
+        <option value="climbing">Wspinaczka</option>
+        <option value="moto">Motocykle (wg P4N)</option>
+        <option value="drinking_water">Woda pitna</option>
+        <option value="toilet">WC</option>
+        <option value="bins">Śmietnik</option>
+        <option value="mobile">Zasięg komórkowy</option>
+        <option value="pets">Zwierzęta OK</option>
+        <option value="overnight">Biwaki / kempingi / schrony (OSM)</option>
+        <option value="parking">Parkingi (OSM)</option>
+        <option value="picnic_site">Pikniki (OSM)</option>
+      </select>
+    </div>
+
+    <div class="listbar">
+      <span id="count"></span>
+      <label class="check"><input id="photos-only" type="checkbox" checked>Tylko ze zdjęciami</label>
+      <label class="check"><input id="only-map" type="checkbox">W widoku mapy</label>
+      <span class="hint">Zdjęcia ze źródeł · oceny wymagają weryfikacji</span>
+      <input id="shortlist-only" type="checkbox" hidden>
+      <input id="show-rejected" type="checkbox" hidden>
+    </div>
+    <div id="cards" class="cards"></div>
+    <div id="cards-sentinel" class="cards-sentinel" hidden aria-hidden="true"></div>
+    <div class="pagination"><span id="page-info"></span></div>
+    <p class="hint">Mapa pokazuje rekordy wybranych kategorii źródeł. Punkt widokowy lub parking nie potwierdza noclegu. Brakujące lub sprzeczne dane wymagają sprawdzenia.</p>
+  </section>
+</main>
+<footer class="app-footer">
+  Prześwit działa lokalnie i do użytku osobistego. Oceny i profile AI to wskazówki z dostępnych danych — nie potwierdzają legalności biwaku, zgody właściciela terenu ani przejezdności drogi. Dane miejsc: źródło P4N (prywatny przegląd, prawa do treści zastrzeżone), mapa © OpenStreetMap (ODbL), obszary „Zanocuj w lesie” © BDL / Lasy Państwowe, zdjęcia satelitarne © Esri i partnerzy.
+</footer>
+
+<dialog id="own-dialog">
+  <div class="dialog-head"><div><span class="eyebrow">WŁASNY PUNKT</span><h2 id="own-title">Dodaj własny punkt</h2></div><button id="close-own" aria-label="Zamknij">✕</button></div>
+  <form id="own-form" class="own-form">
+    <label for="own-name">Nazwa</label>
+    <input id="own-name" type="text" maxlength="200" placeholder="np. Polana nad Bobrem, zjazd za mostem">
+    <fieldset class="own-status"><legend>Status</legend>
+      <label class="check"><input type="radio" name="own-status" value="planned"> Planowane</label>
+      <label class="check"><input type="radio" name="own-status" value="visited"> Byłem</label>
+      <label class="check"><input type="radio" name="own-status" value="someday" checked> Na kiedyś</label>
+    </fieldset>
+    <label for="own-coords">Współrzędne — wklej link Google Maps / OSM albo „szerokość, długość”</label>
+    <input id="own-coords" type="text" placeholder="https://www.google.com/maps/@50.9247,16.2726,15z  lub  50.9247, 16.2726">
+    <div class="own-coords-row">
+      <div><label for="own-lat">Szerokość (lat)</label><input id="own-lat" type="number" step="0.000001" min="-90" max="90"></div>
+      <div><label for="own-lon">Długość (lon)</label><input id="own-lon" type="number" step="0.000001" min="-180" max="180"></div>
+      <button type="button" id="own-pick">Wskaż na mapie</button>
+    </div>
+    <label for="own-description">Opis miejsca (trafia też do profilu AI)</label>
+    <textarea id="own-description" rows="3" maxlength="6000" placeholder="Co tam jest, jak dojechać, co sprawdzić…"></textarea>
+    <label for="own-note">Prywatna notatka</label>
+    <textarea id="own-note" rows="2" maxlength="10000" placeholder="np. byłem w lipcu 2025, wrócić jesienią"></textarea>
+    <label for="own-url">Link (opcjonalnie, https)</label>
+    <input id="own-url" type="url" placeholder="https://…">
+    <label for="own-files">Zdjęcia (JPEG/PNG/WebP; z telefonu też aparat) — duże są zmniejszane do 2048 px; jeśli zdjęcie ma GPS w EXIF, współrzędne wypełnią się same</label>
+    <input id="own-files" type="file" accept="image/*" multiple>
+    <div id="own-photos" class="own-photos"></div>
+    <p id="own-error" class="mini-flag" role="alert"></p>
+    <div class="own-actions"><button type="button" id="own-delete" class="ghost" hidden>Usuń punkt</button><button type="submit" id="own-save" class="accent">Zapisz punkt</button></div>
+  </form>
+</dialog>
+<dialog id="detail">
+  <div class="dialog-head"><span class="eyebrow">KARTA MIEJSCA</span><button id="close-detail" aria-label="Zamknij kartę">✕</button></div>
+  <div id="detail-content"></div>
+</dialog>
+
+<dialog id="sources">
+  <div class="dialog-head"><div><span class="eyebrow">BIBLIOTEKA ŹRÓDEŁ</span><h2>Co pobieramy i skąd?</h2></div><button id="close-sources" aria-label="Zamknij źródła">✕</button></div>
+  <div id="source-catalog"></div>
+  <h3>Ostatnie importy</h3>
+  <div id="jobs-list"></div>
+  <h3>Folder inbox</h3>
+  <div id="inbox-list"></div>
+</dialog>
+
+<div id="undo-toast" hidden role="status"><span id="undo-text"></span><button id="undo">Cofnij</button><button id="undo-close" class="ghost" aria-label="Zamknij">✕</button></div>
+</body>
+</html>

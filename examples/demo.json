@@ -9,7 +9,7 @@
       "lon": 16.1,
       "type": "nature",
       "description": "FIKCYJNE miejsce. Otwarta panorama, spokojna polana. Szuter. Namiot obok motocykla.",
-      "park4night_url": "",
+      "p4n_url": "",
       "geo": {
         "elevation_m": 810,
         "surface": "gravel"
@@ -61,7 +61,7 @@
       "lon": 16.4,
       "type": "nature",
       "description": "FIKCYJNE miejsce. Rzeka, spokojny brzeg i natura. Widok na dolinę.",
-      "park4night_url": "",
+      "p4n_url": "",
       "geo": {
         "elevation_m": 310,
         "water_distance_m": 25,
@@ -114,7 +114,7 @@
       "lon": 16.46,
       "type": "nature",
       "description": "FIKCYJNE miejsce. Panorama. Droga leśna, szlaban i zakaz wjazdu.",
-      "park4night_url": "",
+      "p4n_url": "",
       "geo": {
         "elevation_m": 900,
         "surface": "gravel",
@@ -151,7 +151,7 @@
       "lon": 16.2,
       "type": "nature",
       "description": "FIKCYJNE miejsce. Spokojna łąka, szeroki widok. Brak informacji o zgodzie.",
-      "park4night_url": "",
+      "p4n_url": "",
       "geo": {
         "elevation_m": 420,
         "surface": "dirt"
@@ -178,7 +178,7 @@
       "lon": 16.6,
       "type": "nature",
       "description": "FIKCYJNE miejsce. Rzeka i natura, błoto na dojeździe.",
-      "park4night_url": "",
+      "p4n_url": "",
       "geo": {
         "water_distance_m": 12,
         "surface": "mud"
@@ -205,7 +205,7 @@
       "lon": 16.05,
       "type": "nature",
       "description": "FIKCYJNE miejsce. Jezioro, hałas i tłum. Kampery parkują; brak danych o namiotach.",
-      "park4night_url": "",
+      "p4n_url": "",
       "geo": {
         "water_distance_m": 90,
         "surface": "asphalt"
@@ -232,7 +232,7 @@
       "lon": 22.1,
       "type": "nature",
       "description": "FIKCYJNE miejsce. Panorama, spokojna polana.",
-      "park4night_url": "",
+      "p4n_url": "",
       "geo": {
         "elevation_m": 700,
         "surface": "gravel"

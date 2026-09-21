@@ -1,5 +1,7 @@
 """Modele żądań API (Pydantic). Walidacja typów na wejściu; reguły domenowe pozostają w modułach."""
+
 from typing import Any, Literal, Union
+
 from pydantic import BaseModel, ConfigDict, StrictBool
 
 Radius = Union[int, float, str]
@@ -7,6 +9,7 @@ Radius = Union[int, float, str]
 
 class Request(BaseModel):
     """Bazowy model: nieznane pola są ignorowane, tak jak w poprzedniej wersji API."""
+
     model_config = ConfigDict(extra='ignore')
 
 
@@ -72,3 +75,27 @@ class RankRequest(Request):
     dataset: Any = None
     areas: str = ''
     radius: Radius = 40
+
+
+class OwnPlace(Request):
+    """Własny punkt użytkownika: planowany, odwiedzony albo „na kiedyś”."""
+
+    name: str
+    lat: float
+    lon: float
+    status: Literal['planned', 'visited', 'someday'] = 'someday'
+    description: str = ''
+    note: str = ''
+    url: str = ''
+    key: str = ''  # ustawione = edycja istniejącego własnego punktu
+
+
+class OwnPhoto(Request):
+    key: str
+    content: str  # base64
+    caption: str = ''
+
+
+class OwnPhotoDelete(Request):
+    key: str
+    url: str
