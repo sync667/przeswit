@@ -1,7 +1,7 @@
 [project]
 name = "przeswit"
 version = "2.0"
-description = "Lokalna biblioteka miejsc w naturze — FastAPI, SQLite, lokalna Ollama."
+description = "Local-first library of wild-camping spots for ADV riders: FastAPI, SQLite, on-device AI profiling via Ollama."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

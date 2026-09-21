@@ -1,23 +1,25 @@
-# Jak pomóc w rozwoju Prześwitu
+# Contributing to Prześwit
 
-Dziękujemy za zainteresowanie. Projekt jest mały i lokalny — najbardziej pomagają konkretne zgłoszenia i małe, przetestowane zmiany.
+*[Wersja polska](CONTRIBUTING.pl.md)*
 
-## Zgłoszenia
-- Błąd: użyj szablonu issue „Błąd”; podaj wersję Pythona, system, kroki i fragment `data/app.log` (bez danych osobowych).
-- Pomysł: opisz problem, który rozwiązuje, nie tylko rozwiązanie.
+Thanks for your interest. The project is small and local-first — concrete bug reports and small, tested changes help most.
 
-## Środowisko
+## Reports
+- Bug: use the "Bug" issue template; include Python version, OS, steps, and a snippet of `data/app.log` (no personal data).
+- Idea: describe the problem it solves, not only the solution.
+
+## Environment
 ```
 python -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt     # Windows: .venv\Scripts\pip
 python -m unittest discover -s tests -t .
 ruff check app tests && ruff format app tests
 ```
-Frontend to czyste moduły ES w `app/static/js/` — bez kroku budowania (`node --check app/static/js/*.js` sprawdza składnię). Nie dodawaj frameworków ani zależności z CDN (CSP dopuszcza tylko `self`).
+The frontend is plain ES modules in `app/static/js/` — no build step (`node --check app/static/js/*.js` validates syntax). Do not add frameworks or CDN dependencies (the CSP allows only `self`).
 
-## Zasady
-- Aplikacja jest lokalna i prywatna: żadnych wywołań chmury bez wyraźnej zgody użytkownika, żadnych telemetrii.
-- Dane źródeł zewnętrznych: użytek osobisty, odstępy między żądaniami, brak obchodzenia blokad, brak danych kontaktowych w rekordach.
-- Zmiana promptu lub schematu profilu (`app/prompts/`, `app/profiles.py`) wymaga podbicia `VERSION` (unieważnia gotowe profile) i porównania jakości na próbce (`tools/qa_profiles.py`).
-- Każda zmiana w API ma test w `tests/test_api.py`; zmiany w UI sprawdź w przeglądarce (lista, karta miejsca, mapa).
-- Commity po polsku lub angielsku, jeden temat na commit.
+## Rules
+- The app is local and private: no cloud calls without explicit user consent, no telemetry.
+- External data sources: personal use, delays between requests, no bypassing of blocks, no contact data in records.
+- Changing the prompt or the profile schema (`app/prompts/`, `app/profiles.py`) requires bumping `VERSION` (invalidates ready profiles) and comparing quality on a sample (`tools/qa_profiles.py`).
+- Every API change comes with a test in `tests/test_api.py`; UI changes are checked in a browser (list, place card, map).
+- Commit messages in English or Polish, one topic per commit.

@@ -1,137 +1,119 @@
 # Prześwit
 
-Lokalna, prywatna biblioteka miejsc w naturze na biwak z motocyklem ADV: import miejsc (JSON / GeoJSON / CSV / GPX / ZIP, P4N, OSM, BDL), własne punkty ze zdjęciami, przeglądanie w galerii i na mapie (OSM, satelita, rzeźba terenu, obszary „Zanocuj w lesie”), trasy GPX z odległością każdego miejsca od trasy, decyzje zachowaj / odrzuć (także masowo lassem), notatki — oraz **profilowanie miejsc lokalnym modelem wizyjnym (Ollama, gemma3)** i wyszukiwanie według opisu. Wszystko działa na Twoim komputerze; żadne dane nie wychodzą do chmury.
+*[Wersja polska](README.pl.md)*
 
-*Prześwit is a local-first, single-user library of wild-camping spots for ADV riders: imports, photos, map, GPX routes, keep/reject workflow and on-device AI profiling of places via Ollama (vision model). Polish UI; no cloud, no accounts.*
+A local-first, private library of wild-camping spots for ADV motorcycle trips: import places (JSON / GeoJSON / CSV / GPX / ZIP, P4N, OSM, BDL forest areas), add your own points with photos, browse them as a photo gallery or on a map (OSM, satellite, satellite + terrain relief, Polish "Zanocuj w lesie" forest-camping areas), load GPX routes and see how far every place is from your route, keep / reject places (also in bulk with a lasso), take notes — and **profile every place with a local vision model (Ollama, gemma3)**, then search by a natural-language description. Everything runs on your own computer; nothing is sent to the cloud.
 
-## Zrzuty ekranu
+The UI is in Polish (the data set and the target audience are Polish riders); the code, comments and this document are bilingual enough to hack on.
 
-| Galeria | Karta miejsca z profilem AI | Mapa + lista |
+## Screenshots
+
+| Gallery | Place card with AI profile | Map + list |
 |---|---|---|
-| ![Galeria kafli](docs/screenshots/galeria.jpg) | ![Profil AI miejsca](docs/screenshots/profil-ai.jpg) | ![Mapa z listą](docs/screenshots/mapa.jpg) |
+| ![Card gallery](docs/screenshots/galeria.jpg) | ![AI profile of a place](docs/screenshots/profil-ai.jpg) | ![Map with list](docs/screenshots/mapa.jpg) |
 
-## Wymagania
+## Requirements
 
-- Windows 10/11 (skrypty `.cmd`; sam serwer to zwykły FastAPI i działa też na Linux/macOS), Python 3.10+.
-- [Ollama](https://ollama.com) z modelem wizyjnym: `ollama pull gemma3:12b` (mniejszy `gemma3:4b` też działa, gorzej). Aplikacja uruchamia własny proces Ollamy na porcie 11435 z katalogu modeli `~/.ollama/models` (zmień przez `PRZESWIT_MODELS`). GPU z ≥ 12 GB VRAM dla 12B; profilowanie bez GPU jest bardzo wolne.
-- Internet tylko do pobierania zdjęć z importów i podkładów map; działanie offline na już pobranych danych.
+- Python 3.10+. Windows 10/11 has `START.cmd`; Linux/macOS use `./start.sh` (the server itself is plain FastAPI).
+- [Ollama](https://ollama.com) with a vision model: `ollama pull gemma3:12b` (`gemma3:4b` works too, with lower quality). The app starts its own Ollama process on port 11435 using the models directory `~/.ollama/models` (override with `PRZESWIT_MODELS`). A GPU with ≥ 12 GB VRAM is recommended for the 12B model; CPU-only profiling is very slow.
+- Internet only for downloading photos referenced by imports and for map tiles; already fetched data works offline.
 
-## Szybki start
+## Quick start
 
-1. `START.cmd` — tworzy `.venv`, instaluje `requirements.txt`, uruchamia serwer. Ręcznie: `python -m venv .venv`, `.venv\Scripts\pip install -r requirements.txt`, `.venv\Scripts\python -m app`.
-2. Otwórz http://127.0.0.1:8765 (dokumentacja API: `/docs`).
-3. „Importuj miejsca” → wczytaj plik (wzór: `examples/template.json`, dane demonstracyjne: `examples/demo.json`) albo wrzuć eksport do folderu `inbox/`. Profile AI powstają automatycznie w tle.
+1. `START.cmd` (Windows) or `./start.sh` (Linux/macOS) — creates `.venv`, installs `requirements.txt`, starts the server. Manually: `python -m venv .venv`, `.venv/bin/pip install -r requirements.txt`, `.venv/bin/python -m app`.
+2. Open http://127.0.0.1:8765 (API docs at `/docs`).
+3. On an empty database the app automatically imports the bundled starter set (`seed/places_pl.pack`, 1364 nature spots in Poland), so there is something to browse right away; AI profiles are computed in the background. Add more via "Importuj miejsca" (template: `examples/template.json`, demo data: `examples/demo.json`) or drop an export into `inbox/`.
 
-Duże karty pokazują zdjęcia bez otwierania szczegółów; strzałki zmieniają zdjęcie, kliknięcie otwiera galerię. Odrzuć / Zachowaj zapisują wybór w SQLite (kafel znika, scroll zostaje), „Cofnij” odwraca ostatnią decyzję. Zakładki: Do przejrzenia, Zachowane, Odrzucone, Wszystkie. Odrzucenie nie usuwa danych. Każde miejsce ma kopiowalny identyfikator i link `#place=…`. Ponowny import zachowuje notatki. Zdjęcia zewnętrzne potrzebują internetu; nie są zastępowane fikcyjnymi widokami.
+Large cards show photos without opening details; arrows switch photos, a click opens the gallery. Reject / Keep are stored in SQLite (the card disappears, the scroll position stays), "Cofnij" undoes the last decision. Tabs: to review, kept, rejected, all. Rejecting never deletes data. Every place has a copyable id and a `#place=…` deep link. Re-importing keeps your notes. External photos need internet; they are never replaced by fake imagery.
 
-Klawiatura: `J`/`K` kolejny/poprzedni kafel, `S` zachowaj, `X` odrzuć, `Enter` karta, `M` mapa, `/` szukaj, `D` motyw ciemny/jasny, `?` przypomnienie. Presety filtrów (wbudowane i własne) w pasku filtrów. Aplikację można dodać do ekranu telefonu jako PWA (przez HTTPS; statyki działają offline, dane wymagają połączenia).
+Keyboard: `J`/`K` next/previous card, `S` keep, `X` reject, `Enter` open card, `M` map, `/` search, `D` dark/light theme, `?` reminder. Filter presets (built-in and your own) live in the filter bar. The app can be installed on a phone as a PWA (over HTTPS; static assets work offline, data needs a connection).
 
-Baza i notatki: `data/scout.sqlite3`. Kopię zapasową całego `data/` wykonuj po zatrzymaniu aplikacji (albo przyciskiem w oknie importu). Nie publikuj bazy ani cache wraz z kodem — katalog `data/` jest w `.gitignore`. Rankingi to wskazówki z dostępnych danych, nie potwierdzenie dojazdu ani zgody na namiot.
+Database and notes: `data/scout.sqlite3`. Back up the whole `data/` directory after stopping the app (or use the backup button in the import dialog). Never publish the database or the photo cache with the code — `data/` is git-ignored. Rankings are hints derived from available data, not confirmation of legal access or permission to camp.
 
-Logo: własny znak SVG. Kolory: leśny #203f35, papier #f6f4ef, bursztyn #e5aa61.
+Logo: own SVG mark. Colours: forest #203f35, paper #f6f4ef, amber #e5aa61.
 
-## Rozwój
+## Development
 
-Zależności deweloperskie: `.venv\Scripts\pip install -r requirements-dev.txt`. Testy: `python -m unittest discover -s tests -t .` (albo `pytest`) — testy API używają `fastapi.testclient` i tymczasowej bazy, nie dotykają `data/` ani Ollamy. Styl: `ruff check app tests && ruff format app tests`. Frontend to czyste moduły ES bez kroku budowania; `node --check app/static/js/*.js` sprawdza składnię. CI (GitHub Actions) uruchamia lint i testy na Ubuntu i Windows. Jakość profili AI mierzy `python tools/qa_profiles.py` (metryki, reguły podejrzeń, próbka do przeglądu) — uruchamiaj przed i po zmianie promptu. Linux/macOS: `./start.sh`, tunel `scripts/run_tunnel.sh`.
+Dev dependencies: `pip install -r requirements-dev.txt`. Tests: `python -m unittest discover -s tests -t .` (or `pytest`) — API tests use `fastapi.testclient` and a temporary database; they touch neither `data/` nor Ollama. Style: `ruff check app tests && ruff format app tests`. The frontend is plain ES modules with no build step; `node --check app/static/js/*.js` validates syntax. CI (GitHub Actions) runs lint and tests on Ubuntu and Windows. AI profile quality is measured with `python tools/qa_profiles.py` (metrics, suspicion rules, a review sample) — run it before and after any prompt change. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Źródła danych i prawo: aplikacja jest do użytku osobistego. Moduł `app/p4n/` pobiera publiczne dane P4N na potrzeby własnej biblioteki — przed użyciem sprawdź regulamin serwisu, zachowaj odstępy między żądaniami i nie rozpowszechniaj pobranych danych poza własny użytek (`docs/RESEARCH.md`). Dane OSM i BDL mają własne licencje (atrybucja na mapie).
+Data sources and law: the app is for personal use. The `app/p4n/` module fetches public data of the P4N service for your own library — check the service's terms before running it, keep the request delays, and do not redistribute fetched data beyond personal use. OSM and BDL data carry their own licences (attribution on the map).
 
-## Dane P4N: moduł i zbiór startowy
+## P4N data: module and starter set
 
-`python -m app.p4n <krok>` — wznawialny pipeline z stanem w `data/p4n/`: `scan` (siatka punktów co 0,35°, promień 50 km, domyślnie cała Polska; `--bbox lat_min,lon_min,lat_max,lon_max`), `details` (udogodnienia, ceny, sezonowość, zdjęcia ze starego API), `comments` (pełne komentarze ze stron miejsc; `--country Poland` najpierw), `ingest` (konwersja i upsert do bazy, klucz `p4n:<id>`), `seed` (plik `seed/places_pl.pack`), `all` (scan → details → comments → ingest), `status`. Odstępy 1–2,4 s między żądaniami, przy HTTP 403/429 przerwanie bez ponawiania. Dane kontaktowe właścicieli miejsc nie są zapisywane.
+`python -m app.p4n <step>` — a resumable pipeline with state in `data/p4n/`: `scan` (grid of points every 0.35°, 50 km radius, Poland by default; `--bbox lat_min,lon_min,lat_max,lon_max`), `details` (amenities, prices, seasonality, photos from the legacy API), `comments` (full comments from place pages; `--country Poland` first), `ingest` (conversion and upsert into the database, key `p4n:<id>`), `seed` (writes `seed/places_pl.pack`), `all` (scan → details → comments → ingest), `status`. Delays of 1–2.4 s between requests; HTTP 403/429 stops the run without retries. Contact details of place owners are never stored.
 
-**Zbiór startowy**: repozytorium zawiera `seed/places_pl.pack` — spakowany, nieczytelny jako tekst zbiór miejsc typu PN z Polski (1364 miejsc, komentarze bez autorów, bez danych kontaktowych). Przy pierwszym uruchomieniu na pustej bazie aplikacja wczytuje go automatycznie (ustawienie `seed_imported`), więc od razu jest co przeglądać; profile AI powstają w tle. Usunięte miejsca nie wracają. Zbiór to migawka z daty w etykiecie pliku — odśwież ją własnym pobraniem (`python -m app.p4n all`).
+**Starter set**: the repository ships `seed/places_pl.pack` — a packed, non-plaintext set of nature spots in Poland (1364 places, comments without author names, no contact data). On first start with an empty database the app imports it once (setting `seed_imported`); deleted places do not come back. The set is a snapshot as of the date in its label — refresh it with your own run (`python -m app.p4n all`).
 
-## Struktura projektu
+## Project layout
 
 ```
-app/                 pakiet Pythona (backend)
-  server.py          start uvicorn (127.0.0.1:8765)
-  web.py             aplikacja FastAPI: middleware, obsługa błędów, statyki, cykl życia wątków
-  api.py             endpointy /api/* i /photos/*
-  schemas.py         modele żądań (Pydantic)
-  security.py        token sesji, dozwolone Host/Origin, nagłówki CSP
-  storage.py         SQLite, kopie zapasowe, ustawienia
-  core.py            normalizacja, filtry obszaru, ranking
-  importers.py       import JSON/GeoJSON/CSV/GPX/ZIP i folder inbox
-  providers.py       konektory publicznych danych (OSM, BDL)
-  public_web.py      pobieranie P4N
-  sync.py            zadania synchronizacji obszarów
-  ai_runtime.py      własny proces Ollama (127.0.0.1:11435), telemetria zasobów
-  local_vision.py    lokalne wnioskowanie na zdjęciach
-  profiles.py        automatyczne profile miejsc i wyszukiwanie opisem
-  photo_cache.py     lokalna pamięć zdjęć (data/photos)
-  prompts/           prompty modelu
-  static/            frontend (część pakietu, bez kroku budowania)
-    index.html, style.css, logo.svg, vendor/leaflet
-    js/main.js       punkt wejścia (moduły ES): podpięcie zdarzeń i start
-    js/state.js      wspólny stan i stałe; dom.js pomocniki; api.js fetch z tokenem
-    js/library.js    ładowanie, filtrowanie, sortowanie; cards.js galeria kart; detail.js szczegóły
-    js/map.js        Leaflet + warstwa BDL; jobs.js źródła/importy/polling; transfer.js import pliku i eksporty
-    js/ai.js         wyszukiwanie opisem, kolejka profili, cache zdjęć, baza
-examples/            template.json (szablon importu), demo.json (dane demonstracyjne)
-tests/               testy unittest (core, importery, profile, cache zdjęć, baza, API)
-docs/                notatki badawcze, porównanie modeli, raport weryfikacji
-data/                baza, kopie, cache zdjęć, logi (ignorowane przez git)
-inbox/               obserwowany folder eksportów (ignorowany przez git)
+app/                 Python package (backend)
+  server.py          uvicorn entry point (127.0.0.1:8765)
+  web.py             FastAPI app: middleware, error mapping, static files, worker lifecycle, seed import
+  api.py             /api/* and /photos/* endpoints
+  schemas.py         request models (Pydantic)
+  security.py        session token, allowed Host/Origin, CSP headers, Cloudflare Access gate
+  settings.py        loads data/przeswit.env
+  storage.py         SQLite, backups, settings, migrations
+  core.py            normalisation, area filters, ranking
+  importers.py       JSON/GeoJSON/CSV/GPX/ZIP import and the inbox folder
+  providers.py       public data connectors (OSM, BDL)
+  public_web.py      P4N public map adapter (sampled)
+  p4n/               resumable P4N pipeline (client, convert, dataset, pipeline, CLI)
+  sync.py            area synchronisation jobs
+  ai_runtime.py      app-owned Ollama process (127.0.0.1:11435), resource telemetry
+  local_vision.py    local vision inference
+  profiles.py        automatic place profiles, description search, card metrics
+  photo_cache.py     local photo cache (data/photos)
+  prompts/           model prompts
+  static/            frontend (part of the package, no build step)
+    js/main.js       entry point (ES modules): wiring and boot
+    js/state.js      shared state; dom.js helpers; api.js fetch with token
+    js/library.js    loading, filtering, sorting; cards.js gallery; detail.js place card
+    js/map.js        Leaflet + basemaps + BDL layer; lasso.js bulk selection; routes.js GPX routes and trip plan
+    js/own.js        own points with photos (EXIF GPS); exif.js; presets.js presets, shortcuts, theme, PWA
+    js/ai.js         description search, profile queue, photo cache, database; jobs.js; transfer.js
+seed/                starter data set (packed)
+tools/               qa_profiles.py — profile quality report
+examples/            template.json (import template), demo.json (demo data)
+tests/               unittest suites (core, importers, profiles, photo cache, database, API, P4N)
+docs/                model comparison, validation notes, screenshots
+data/                database, backups, photo cache, logs, env file (git-ignored)
+inbox/               watched export folder (git-ignored)
 ```
 
-Adresy w przeglądarce: `/` (aplikacja), `/static/...` (frontend z `app/static/`), `/examples/template.json`, `/photos/<skrót>` (lokalne zdjęcia), `/api/...` (JSON), `/docs` (OpenAPI). Każdy POST wymaga nagłówka `X-ADV-Token` z wartością z `/api/config` oraz Origin z tej aplikacji; serwer przyjmuje tylko Host `127.0.0.1:8765` / `localhost:8765`.
+Browser paths: `/` (app), `/static/...`, `/examples/template.json`, `/photos/<hash>` (cached photos), `/api/...` (JSON), `/docs` (OpenAPI), `/sw.js` (service worker). Every POST requires the `X-ADV-Token` header (value from `/api/config`) and an Origin of this app; the server accepts only Host `127.0.0.1:8765` / `localhost:8765` (plus the configured public host).
 
-## Trasy GPX i plan jazdy
+## GPX routes and trip plan
 
-W trybie „Mapa + lista” wczytaj dowolną liczbę plików GPX (ślady z segmentami, trasy, punkty). Każde miejsce dostaje odległość od najbliższej trasy (punkt → odcinek), lista sortuje się według niej, filtr „tylko do X km od trasy” działa też w galerii. Panel „Plan jazdy” układa zachowane miejsca (i własne punkty „planowane”) w kolejności km od startu trasy, dzieli na dni (km/dzień) i eksportuje GPX z ponumerowanymi waypointami oraz śladem trasy — dla Garmina, OsmAnd itp.
+In "Mapa + lista" mode load any number of GPX files (tracks with segments, routes, waypoints). Every place gets its distance to the nearest route (point → segment), the list sorts by it, and the "only within X km of the route" filter works in the gallery too. The "Plan jazdy" panel orders kept places (and own points marked "planned") by km from the route start, splits them into days (km/day) and exports a GPX with numbered waypoints plus the route track — for Garmin, OsmAnd and similar.
 
-## Dostęp z telefonu (Cloudflare Tunnel + Access)
+## Phone access (Cloudflare Tunnel + Access)
 
-Aplikacja może być dostępna pod własną domeną bez otwierania portów: `cloudflared` na tym komputerze utrzymuje tunel do 127.0.0.1:8765, a Cloudflare Access wpuszcza wyłącznie zalogowanego właściciela (Google / kod na e-mail). Konfiguracja tunelu i poświadczenia leżą w `data/cloudflared/` (poza gitem). Serwer wymaga zmiennych `PRZESWIT_PUBLIC_HOST` (np. `przeswit.example.com`) i `PRZESWIT_ACCESS_EMAILS` (adresy po przecinku; wzór w `przeswit.env.example`, plik `data/przeswit.env` wczytuje `scripts/run_app.cmd`); żądania z publicznego hosta bez nagłówka `Cf-Access-Authenticated-User-Email` z jednym z tych adresów dostają 403 — nawet gdyby ktoś ominął Access. Właściciele (`PRZESWIT_OWNER_EMAILS`) mogą zapisywać; pozostałe dozwolone adresy dostają tryb tylko do odczytu (baner, ukryte przyciski, POST → 403). Każda decyzja i notatka zapamiętuje autora (e-mail z Access albo `local`) i czas. Opcjonalnie serwer weryfikuje podpis JWT Access (`PRZESWIT_ACCESS_TEAM`, `PRZESWIT_ACCESS_AUD`; klucze publiczne zespołu pobierane co godzinę). Dostęp lokalny działa jak dotąd. Uruchamianie jest ręczne: `START.cmd` (serwer) i `scripts/run_tunnel.cmd` (tunel) — bez autostartu; logi w `data/app.log` i `data/cloudflared/tunnel.log`.
+The app can be reachable under your own domain without opening ports: `cloudflared` on the computer keeps a tunnel to 127.0.0.1:8765 and Cloudflare Access lets in only the logged-in owner (Google / one-time e-mail code). Tunnel configuration and credentials live in `data/cloudflared/` (outside git). The server needs `PRZESWIT_PUBLIC_HOST` (e.g. `przeswit.example.com`) and `PRZESWIT_ACCESS_EMAILS` (comma-separated; template in `przeswit.env.example`, loaded from `data/przeswit.env`); requests on the public host without a `Cf-Access-Authenticated-User-Email` header matching one of those addresses get 403 — even if someone bypassed Access. Owners (`PRZESWIT_OWNER_EMAILS`) can write; other allowed addresses get a read-only mode (banner, hidden buttons, POST → 403). Every decision and note records its author (Access e-mail or `local`) and time. Optionally the server verifies the Access JWT signature (`PRZESWIT_ACCESS_TEAM`, `PRZESWIT_ACCESS_AUD`; team public keys refreshed hourly). Local access keeps working as before. Start manually: `START.cmd` / `scripts/run_app.cmd` (server) and `scripts/run_tunnel.cmd` or `scripts/run_tunnel.sh` (tunnel) — no autostart; logs in `data/app.log` and `data/cloudflared/tunnel.log`.
 
-## Lokalne dopasowanie zdjęć
+## Automatic profiles and description search
 
-Ollama i model gemma3:4b. Model pobierzesz poleceniem `ollama pull gemma3:4b`. Uruchom Ollamę przed analizą. Wpisz oczekiwania, wybierz „Zbadaj zdjęcia z tej strony” (maks. 24 rekordy, kolejno) albo przycisk w szczegółach miejsca. Możesz zatrzymać kolejkę po bieżącym miejscu. Analiza obejmuje do 3 zdjęć, opis, komentarze i kontekst z importu. Wyniki zapisują się lokalnie i sortują miejsca według dopasowania do aktualnego opisu; zmiana opisu wymaga nowej analizy. Odrzucone i zachowane wybory pozostają niezależne od AI.
+Every new or changed place gets a profile in the background, independent of the search prompt; changes are detected at start and every 15 s. The SQLite table `profiles` stores state, prompt version, a digest of the source data, errors and the result. A restart resumes interrupted records; errors get up to three automatic retries with back-off; the UI can retry them manually and pause the queue after the current place. Up to two analyses run in parallel depending on free VRAM/RAM.
 
-Obrazy mogą być osadzone w JSON jako data:image/jpeg;base64, data:image/png;base64 lub data:image/webp;base64. Automatycznie pobierane są bezpośrednie obrazy z CDN źródła P4N i upload.wikimedia.org. Linki do stron galerii nie są obrazami. Inne źródła wymagają osadzenia obrazów w imporcie. Limit 6 MB na obraz, przekierowania wyłączone. Nie ma analizy zastępczej samym tekstem, gdy żaden obraz nie został wczytany.
+The classification prompt is `app/prompts/profile_prompt.md` (v3). The catalogue has 37 features: landscape, water, surface, tent space, motorcycle, privacy, traffic, amenities, costs and risks. Each recognised feature has a score, a confidence, a reason and references to sources actually passed to the model (the response schema restricts evidence ids to those). Features derived from text must quote the source; the code verifies that the quote exists, drops unsupported observations and caps the confidence of unquoted ones. Up to 5 photos and 15 latest comments per record. No photos means a `text_only` profile, never a faked image analysis.
 
-Wnioskowanie odbywa się wyłącznie przez lokalny adres 127.0.0.1:11434, bez płatnego API. Korzysta z zasobów komputera i energii. Ocena jest subiektywna; model nie potwierdza legalności ani dojazdu. Zdjęcia i opisy nie otrzymują uprawnień do wykonywania narzędzi.
+"Szukaj według opisu" runs a second prompt that translates your wish into features, target values, weights and hard requirements; the code then scores ALL ready profiles, weighting by confidence — unknown features do not satisfy requirements. The interpretation is shown in the UI, unsupported requirements are surfaced. Results are a snapshot of ready profiles; search again to include profiles finished later. Profiling never changes your kept/rejected decisions.
 
-## Automatyczne profile i wyszukiwanie — aktualny tryb
+Card metrics ADV / View / Water / Quiet come from rules (geo, keywords) and, when a profile is ready, from its features (best-documented feature with confidence ≥ 40 %, ≥ 60 % for text-only profiles; negative features such as mud or barriers lower ADV). Profile values complement the rules rather than overwrite them; a saved cloud analysis takes precedence. Cards show an "AI" tag, the place card shows the mode and the reasoning for every metric.
 
-Zastępuje ręczne ocenianie stron opisane powyżej. Każda nowa lub zmieniona lokacja otrzymuje profil w tle, niezależny od prompta wyszukiwania. Obecna baza jest profilowana tą samą kolejką. Po starcie i co 15 sekund wykrywane są zmiany danych. Tabela SQLite profiles przechowuje stan, wersję prompta, skrót danych źródłowych, błędy i wynik. Restart wznawia przerwane rekordy, błędy mają maksymalnie trzy automatyczne próby z odstępem; interfejs pozwala ponowić je ręcznie i wstrzymać pracę po bieżącym miejscu. Jedna analiza naraz.
+Inference happens only through the local Ollama process (127.0.0.1:11435); no paid APIs. Judgements are subjective; the model does not confirm legality or road access. Photos and descriptions never get tool-execution rights.
 
-Pełny prompt klasyfikacji: app/prompts/profile_prompt.md. Katalog ma 37 cech, m.in. krajobraz, wodę, nawierzchnię, namiot, motocykl, prywatność, ruch, udogodnienia, koszty i ryzyka. Każda rozpoznana cecha ma natężenie, pewność, uzasadnienie i odniesienia do źródeł. Do 5 zdjęć i do 15 komentarzy / dowodów na rekord. Brak zdjęć oznacza profil text_only, a nie udawaną analizę obrazu. Zmiany treści pod niezmienionym URL zdjęcia nie są wykrywane bez nowego importu z innymi danymi.
+## Durable database and concurrency
 
-Szukaj według opisu uruchamia drugi prompt modelu: tłumaczy życzenie na cechy, ich pożądane wartości, wagi i wymagania konieczne. Potem kod porównuje WSZYSTKIE gotowe aktualne profile, nie tylko bieżącą stronę. Wynik uwzględnia pewność dowodów, a nieznane cechy nie spełniają wymagań. Plan jest pokazany w „Jak AI zrozumiało wyszukiwanie?”. Niewspierane wymagania są ujawniane. Dokładna geografia powinna być określona filtrami obszaru; model nie jest silnikiem tras ani weryfikatorem zgód. Złożone alternatywy są przybliżane wagami, nie pełną logiką boolowską.
+Database: `data/scout.sqlite3`, SQLite WAL, `synchronous=FULL`, `busy_timeout=20 s`. Places, decisions, notes, profiles and queue state survive restarts. The path can be changed with `PRZESWIT_DATA`. Online backups use the SQLite Backup API, then `quick_check` and an atomic rename; one backup per day lands in `data/backups/`, extra ones via the button in the import dialog. Backups are never deleted automatically and live on the same disk — copy them elsewhere for real safety. Restore only after stopping the app.
 
-Wyniki wyszukiwania są migawką gotowych profili i wymagają ponownego wyszukania, by uwzględnić zakończone później analizy. Oceny dopasowania są ważone według pewności; 0 nie oznacza potwierdzonej nieprzydatności. Profilowanie nie zmienia zapisanych/odrzuconych wyborów. Profile pozostają w bazie także przy ponownym imporcie identycznych danych.
+The app-owned Ollama process runs on 127.0.0.1:11435 with `OLLAMA_NUM_PARALLEL=2` and one loaded model; cloud features and automatic model pruning are disabled for it. A regular Ollama on 11434 stays a separate service. Job claims use `BEGIN IMMEDIATE` and a durable `running` status; source and version changes prevent an older answer from overwriting a newer profile. The parallelism control is Auto / 1 / 2: Auto grants two jobs on a ≥ 18 GB GPU with ≥ 3 GB free VRAM, one below that, and pauses new jobs below 1.5 GB VRAM or 4 GB free RAM. Search takes precedence over starting new profiles.
 
-## Oceny na kafelkach z profilu AI
+## Local photo cache
 
-Metryki ADV / Widok / Woda / Spokój pochodzą z reguł (geo, słowa kluczowe) i — gdy profil AI jest gotowy — z jego cech: Widok z panoramy, gór, położenia, zachodu/wschodu, natury; Woda z brzegu, rzeki, jeziora, plaży, dojścia do wody; ADV z dojazdu, szutru, lekkiego terenu, miejsca na motocykl i płaskiego terenu, obniżane przez trudny teren, błoto, szlabany i stromiznę; Spokój z osłonięcia, ciszy, małej liczby ludzi, zabudowy i ruchu. Liczy się najlepiej udokumentowana cecha z pewnością ≥ 40%. Wartości z profilu uzupełniają reguły (nie kasują oceny wody z odległości w imporcie); zapisana analiza chmurowa ma pierwszeństwo. Na kafelku widać znacznik „AI”, w karcie miejsca tryb „Profil AI (lokalny) + reguły” oraz uzasadnienie każdej metryki w sekcji dowodów. Karta miejsca pokazuje też ocenę i liczbę komentarzy ze źródła, mapę lokalizacji (podkład OSM, jeśli włączony), komentarze i przyciski zachowaj / odrzuć.
+Images from known direct CDN addresses are stored in `data/photos` under the SHA-256 of the URL; metadata and errors in the `photo_cache` table. Only addresses already present in imported records are fetched — the app never crawls services for extra photos. Background prefetch is parallel (6 threads by default, `PRZESWIT_PHOTO_PARALLEL` 1–10, request starts spaced 0.25 s, the same URL never fetched twice at once) and shares the cache with profiling. Limits: 50 GiB total, 6 MB per photo, 2 GiB free-disk reserve. A 401/403/429 defers the whole source for 24 h; single-photo errors are deferred 24 h. Own photos uploaded through the UI are stored the same way under `own://<sha256>` addresses. The gallery and the model use the same file, served at `/photos/<hash>` without CDN redirects. SQLite backups cover photo metadata, not the files — keep `data/photos` for a full offline copy.
 
-## Wybrany model i dane tekstowe
+## Licence
 
-Aktualny model: gemma3:12b (zastępuje wcześniejszy 4B). Wyniki małego porównania jakości/czasu i jego ograniczenia opisuje docs/MODEL_COMPARISON.md. Profile v2 uwzględniają opis, 15 najnowszych komentarzy i dowodów, zdjęcia, geo i metadane. Zakres materiału widać w szczegółach miejsca.
-
-## Trwała baza i równoległość
-
-Baza: data/scout.sqlite3, SQLite WAL, synchronous=FULL, busy_timeout=20 s. Miejsca, wybory, notatki, profile i stany kolejki pozostają po zamknięciu. Ścieżkę można zmienić przez PRZESWIT_DATA (starsze ADV_SCOUT_DATA nadal działa). Kopie online tworzy SQLite Backup API, następnie kontrola quick_check i atomowa zmiana nazwy. Raz dziennie powstaje data/backups/przeswit-YYYY-MM-DD.sqlite3; dodatkową kopię tworzy przycisk w „Importuj miejsca → Baza danych i kopie zapasowe”. Kopie nie są automatycznie kasowane. Są na tym samym dysku: dla ochrony przed awarią dysku skopiuj backup również na inny nośnik. Odtwarzaj po zatrzymaniu aplikacji; nie zastępuj pliku SQLite w trakcie pracy ani przy aktywnych plikach WAL.
-
-Własny proces Ollama Prześwitu działa na 127.0.0.1:11435, OLLAMA_NUM_PARALLEL=2, jeden załadowany model. Korzysta z katalogu modeli `~/.ollama/models` (albo `OLLAMA_MODELS` / `PRZESWIT_MODELS`). Chmura i automatyczne porządkowanie modeli wyłączone dla tego procesu. Zwykła Ollama na porcie 11434 pozostaje osobną usługą. START.cmd / `python -m app` uruchamia lokalny silnik, jeśli potrzeba.
-
-Profilowanie ma do dwóch wykonawców. Rezerwacje zadań używają BEGIN IMMEDIATE i trwałego statusu running. Zmiany źródła i wersji uniemożliwiają nadpisanie nowszego profilu starszą odpowiedzią. W interfejsie Auto / 1 / 2; Auto przyznaje dwa zadania na GPU >=18 GB i >=3 GB wolnego VRAM, jedno poniżej tego zapasu, wstrzymuje nowe zadania przy <1,5 GB VRAM albo <4 GB wolnego RAM. Gdy telemetria GPU niedostępna, limit wynosi jeden. Telemetria co 10 s; to ostrożny limit przyjmowania prac, nie gwarancja braku OOM. Już rozpoczęte analizy kończą się normalnie. Limit 2 został zweryfikowany na tym komputerze; więcej wolnego VRAM nie dowodzi korzyści z większej liczby zadań. Wyszukiwanie ma pierwszeństwo przed startem kolejnych profili.
-
-Zdjęcia w bazie mogą być adresami URL, a nie lokalnymi plikami. Sama trwałość bazy nie zapewnia dostępności zewnętrznych fotografii offline.
-
-## Lokalna pamięć zdjęć
-
-Obrazy ze znanych, bezpośrednich adresów CDN zapisujemy w data/photos pod skrótem SHA-256 adresu. Metadane i błędy w tabeli photo_cache. Pobieramy wyłącznie adresy już zaimportowane w photos; nie skanujemy serwisów ani CDN w poszukiwaniu dodatkowych zdjęć. Pobieranie w tle działa równolegle (domyślnie 6 wątków, `PRZESWIT_PHOTO_PARALLEL` 1–10), starty żądań są rozłożone co 0,25 s, ten sam adres nigdy nie jest pobierany dwa razy naraz; cache jest współdzielony z profilowaniem. Limit 50 GiB całego cache, 6 MB na zdjęcie, rezerwa 2 GiB wolnego dysku. Przycisk wstrzymuje pobieranie wyprzedzające; analiza konkretnego miejsca nadal może pobrać potrzebne zdjęcie.
-
-Galeria i model używają tego samego pliku. Lokalne zdjęcia są dostępne pod /photos/<skrót>, bez przekierowań na CDN. Ponowne użycie nie wymaga internetu. Pozostałe linki (np. stron galerii zamiast plików obrazów) nie są automatycznie pobierane. Odpowiedź 401/403/429 odkłada źródło na 24 godziny. Błędy pojedynczych zdjęć są odraczane na 24 godziny. Brak pliku na dysku przy zachowanych metadanych powoduje ponowne pobranie.
-
-Kopia SQLite obejmuje metadane zdjęć, nie same pliki data/photos. Dla pełnej kopii offline zachowaj także ten folder. Lokalny cache nie zwiększa rozdzielczości fotografii i nie zmienia praw do treści; zachowane są oryginalne URL i podpisy.
-
-Naprawa profilowania: dynamiczny schemat odpowiedzi ogranicza evidence do identyfikatorów rzeczywiście przekazanych modelowi. Usuwa to błędy placeholderów typu comment:N. Ograniczone długości list i zwiększony limit generacji zapobiegają części niepełnych odpowiedzi. Nadal działa ścisła walidacja; niezatwierdzona odpowiedź nie trafia do rankingu.
-
-## Licencja
-
-MIT — zobacz `LICENSE`. Leaflet (`app/static/vendor/`) na licencji BSD-2 (`app/static/vendor/LICENSE`).
+MIT — see `LICENSE`. Leaflet (`app/static/vendor/`) is BSD-2 (`app/static/vendor/LICENSE`).
